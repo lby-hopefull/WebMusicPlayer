@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎵 ESP32 音乐播放器 (Standalone Web Player) / ESP32 Music Player
+# ESP32 音乐播放器 (Standalone Web Player) / ESP32 Music Player
 
 **[🇨🇳 中文](#-中文版本)** &nbsp;|&nbsp; **[🇺🇸 English](#-english-version)**
 
@@ -21,11 +21,11 @@
   <a href="#-english-version"><img src="https://img.shields.io/badge/🇺🇸%20English-Switch-lightgrey?style=for-the-badge" alt="Switch to English"></a>
 </p>
 
-### 📖 项目简介
+### 项目简介
 
 一个功能强大的单文件 Web 音乐播放器，专为本地网络或嵌入式设备（如 ESP32）设计，但同样适用于个人网站。它完全由前端技术驱动，支持歌词显示、后台播放、IndexedDB 缓存及本地文件夹导入。
 
-### ✨ 核心特性
+### 核心特性
 
 - **离线优先 & 智能缓存**：利用浏览器 IndexedDB 技术，支持将歌曲缓存至本地，即使在无网络环境下也能流畅播放。
 - **高级歌词引擎**：支持逐字/逐词滚动高亮，兼容翻译行识别，提供沉浸式的视听体验。
@@ -33,7 +33,7 @@
 - **全平台兼容**：响应式设计，适配手机、平板及桌面端，并支持通过文件系统 API 直接导入本地文件夹。
 - **数据持久化**：自动保存播放进度、播放历史统计及队列状态，刷新页面不丢失数据。
 
-### 🛠️ 功能亮点
+### 功能亮点
 
 | 功能模块 | 详细说明 |
 | :--- | :--- |
@@ -44,7 +44,7 @@
 | **统计分析** | 自动记录每首歌的播放次数，支持按热度排序查看。 |
 | **数据管理** | 支持手动清除缓存、删除单曲缓存或从所有列表中移除歌曲。 |
 
-### 📦 技术栈
+### 技术栈
 
 - **核心语言**：HTML5, JavaScript (ES6+)
 - **前端库**：
@@ -53,7 +53,7 @@
 - **样式布局**：原生 CSS3，采用 Flexbox 布局，无第三方 UI 框架依赖。
 - **关键 API**：Media Session API (媒体控制), File System Access API (本地文件夹读取)。
 
-### 🚀 快速开始
+### 快速开始
 
 由于这是一个单 HTML 文件应用，部署非常简单：
 
@@ -79,7 +79,7 @@
 | `/music_list` | GET | 获取服务器端歌曲列表 | JSON 数组格式的文件名列表 |
 | `/music_play` | GET | 播放/下载指定歌曲 | 参数 `file=文件名`，返回音频文件流 |
 
-### 🤝 贡献指南
+### 贡献指南
 
 欢迎提交 Issue 或 Pull Request 来改进此项目：
 1. Fork 仓库
@@ -96,7 +96,7 @@
   **版权**: (c) 2008 Jacob Seidelin, (c) 2009 Opera Software ASA, (c) 2010 Joshua Kifer, (c) 2015 António Afonso
 
 
-### 📄 许可证
+### 许可证
 
 该项目为开源项目。
 
@@ -118,11 +118,11 @@
   <a href="#-中文版本"><img src="https://img.shields.io/badge/🇨🇳%20中文-Switch-lightgrey?style=for-the-badge" alt="Switch to Chinese"></a>
 </p>
 
-### 📖 Introduction
+### Introduction
 
 A powerful single-file Web Music Player designed for local networks or embedded devices (such as ESP32), but equally suitable for personal websites. It is entirely driven by front-end technologies, supporting lyrics display, background playback, IndexedDB caching, and local folder import.
 
-### ✨ Core Features
+### Core Features
 
 - **Offline-First & Smart Caching**: Leverages browser IndexedDB technology to cache songs locally, enabling smooth playback even without a network connection.
 - **Advanced Lyrics Engine**: Supports word-by-word scrolling highlights with translation line recognition, providing an immersive audio-visual experience.
@@ -130,7 +130,7 @@ A powerful single-file Web Music Player designed for local networks or embedded 
 - **Cross-Platform Compatibility**: Responsive design adapted for phones, tablets, and desktops, with support for importing local folders via the File System Access API.
 - **Data Persistence**: Automatically saves playback progress, play history statistics, and queue state — no data is lost on page refresh.
 
-### 🛠️ Feature Highlights
+### Feature Highlights
 
 | Module | Description |
 | :--- | :--- |
@@ -141,7 +141,7 @@ A powerful single-file Web Music Player designed for local networks or embedded 
 | **Statistics & Analytics** | Automatically records play counts for each song; supports sorting by popularity. |
 | **Data Management** | Manually clear cache, delete individual song caches, or remove songs from all lists. |
 
-### 📦 Tech Stack
+### Tech Stack
 
 - **Core Languages**: HTML5, JavaScript (ES6+)
 - **Front-end Libraries**:
@@ -150,7 +150,7 @@ A powerful single-file Web Music Player designed for local networks or embedded 
 - **Styling & Layout**: Native CSS3 with Flexbox layout, no third-party UI framework dependencies.
 - **Key APIs**: Media Session API (media controls), File System Access API (local folder reading).
 
-### 🚀 Quick Start
+### Quick Start
 
 Since this is a single HTML file application, deployment is straightforward:
 
@@ -167,7 +167,7 @@ The project filename includes `ESP32`, suggesting it was originally designed as 
 - Start the ESP32's Web Server service.
 - Connect to the ESP32's Wi-Fi hotspot or LAN, and access the IP address via a browser to control playback.
 
-### 🎛️ Backend API Reference
+### Backend API Reference
 
 *(Note: Based on code analysis, the front-end calls specific backend endpoints via Fetch API to retrieve file lists and streaming data.)*
 
@@ -176,7 +176,7 @@ The project filename includes `ESP32`, suggesting it was originally designed as 
 | `/music_list` | GET | Retrieve the server-side song list | JSON array of filenames |
 | `/music_play` | GET | Play/download a specific song | Parameter `file=filename`, returns audio file stream |
 
-### 🤝 Contributing
+### Contributing
 
 Contributions via Issues or Pull Requests are welcome to improve this project:
 1. Fork the repository
@@ -193,7 +193,7 @@ Contributions via Issues or Pull Requests are welcome to improve this project:
   **License**: MIT  
   **Copyright**: (c) 2008 Jacob Seidelin, (c) 2009 Opera Software ASA, (c) 2010 Joshua Kifer, (c) 2015 António Afonso
 
-### 📄 License
+### License
 
 This project is open-source.
 
