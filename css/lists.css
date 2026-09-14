@@ -1,0 +1,38 @@
+/* ========== 歌曲列表页面 ========== */
+#page-lists {
+  padding: 20px;
+}
+.list { 
+  margin-top: 15px; 
+}
+.list-title { 
+  font-weight: bold; 
+  margin-top: 15px; 
+  cursor: pointer; 
+  user-select: none;
+  padding: 10px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.list-title button { 
+  margin-left: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.song-item { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 10px 15px; 
+  border-bottom: 1px solid #eee;
+  background: white;
+}
+.song-item:last-child {
+  border-bottom: none;
+}
+
+

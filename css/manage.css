@@ -1,0 +1,152 @@
+/* ========== 管理页面 ========== */
+#page-manage {
+  padding: 20px;
+}
+
+.manage-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.manage-actions button {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.manage-actions button[style*="f44336"] {
+  background: #f44336;
+}
+.manage-actions button[style*="f44336"]:hover {
+  background: #d32f2f;
+}
+.manage-actions button[style*="ff9800"] {
+  background: #ff9800;
+}
+.manage-actions button[style*="ff9800"]:hover {
+  background: #f57c00;
+}
+.manage-actions button[style*="4CAF50"] {
+  background: #4CAF50;
+}
+.manage-actions button[style*="4CAF50"]:hover {
+  background: #43a047;
+}
+
+.manage-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.manage-song-list {
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+}
+
+.manage-song-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s;
+}
+.manage-song-item:last-child {
+  border-bottom: none;
+}
+.manage-song-item:hover {
+  background: #f9f9f9;
+}
+
+.manage-song-item input[type="checkbox"] {
+  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.manage-song-name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.cache-status {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  margin-right: 10px;
+}
+.cache-status.cached {
+  background: #4CAF50;
+  color: white;
+}
+.cache-status.uncached {
+  background: #ccc;
+  color: #666;
+}
+
+.manage-song-item button {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: #f44336;
+}
+.manage-song-item button:hover {
+  background: #d32f2f;
+}
+
+.progress-container {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  display: none;
+}
+.progress-bar-container {
+  width: 100%;
+  height: 20px;
+  background: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: #4CAF50;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+/* 对话框 */
+#songDialog {
+  padding: 20px;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  margin: auto;
+}
+#songDialog::backdrop {
+  background: rgba(0,0,0,0.5);
+}
+#dialogSongList {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin: 15px 0;
+}
+#dialogSongList label {
+  display: block;
+  padding: 8px;
+  cursor: pointer;
+}
+#dialogSongList label:hover {
+  background: #f5f5f5;
+}

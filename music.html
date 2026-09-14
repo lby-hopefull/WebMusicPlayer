@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>音乐播放器</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/player.css">
+<link rel="stylesheet" href="css/lists.css">
+<link rel="stylesheet" href="css/stats.css">
+<link rel="stylesheet" href="css/manage.css">
+</head>
+<body>
+
+<div class="page-container">
+
+<!-- 播放器页面 -->
+<section id="page-player" class="active">
+  <div id="player-swiper">
+    <!-- 第一页：封面和控制 -->
+    <div class="player-page" id="player-page-cover">
+      <div id="albumCover">
+        <img id="coverImage" style="display:none;">
+        <span id="coverPlaceholder">暂无封面</span>
+      </div>
+      
+      <div id="progressSection">
+        <div id="trackInfo">
+          <div id="trackDetails">
+            <div id="songTitle">选择歌曲播放</div>
+            <div id="songArtistAlbum"></div>
+          </div>
+          <div id="trackProgress">00:00 / 00:00</div>
+        </div>
+        <input type="range" id="progressBar" value="0" min="0" max="100" step="0.01">
+      </div>
+      
+      <div class="controls-row">
+        <div class="play-mode-section">
+          <label>播放模式:</label>
+          <select id="playMode">
+            <option value="sequential">顺序</option>
+            <option value="loop">单曲循环</option>
+            <option value="random" selected>随机</option>
+          </select>
+        </div>
+        <button onclick="playPrev()">⏮</button>
+        <button id="playPauseBtn" onclick="togglePlayPause()">▶</button>
+        <button onclick="playNext()">⏭</button>
+        <div class="volume-section">
+          <label>音量:</label>
+          <input type="range" id="volumeSlider" value="100" min="0" max="100" oninput="setVolume(this.value)">
+          <span id="volumeValue">100</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 第二页：播放队列 -->
+    <div class="player-page" id="player-page-queue">
+      <div class="queue-header">
+        <h3>当前播放队列</h3>
+        <button onclick="shuffleQueue()">🔀 随机排序</button>
+      </div>
+      <div id="playlist"></div>
+    </div>
+  </div>
+  
+  <!-- 歌词界面 -->
+  <div id="lyricsContainer">
+    <div id="lyricDelayControl">
+      <span>歌词延迟:</span>
+      <button onclick="adjustLyricDelay(-0.05)">-</button>
+      <span id="lyricDelayValue">0.00s</span>
+      <button onclick="adjustLyricDelay(0.05)">+</button>
+    </div>
+  </div>
+  <button id="coverLyricToggle" onclick="toggleCoverLyric()">显示歌词</button>
+</section>
+
+<!-- 歌曲列表页面 -->
+<section id="page-lists">
+  <h3>自建列表</h3>
+  <div style="display:flex; gap:10px; margin-bottom:15px;">
+    <input id="newListName" placeholder="新列表名" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
+    <button onclick="createList()">创建</button>
+  </div>
+  <div id="customLists"></div>
+</section>
+
+<!-- 统计页面 -->
+<section id="page-stats">
+  <h3>播放统计</h3>
+  <div id="stats"></div>
+</section>
+
+<!-- 管理页面 -->
+<section id="page-manage">
+  <h3>音乐管理</h3>
+  <div class="manage-actions">
+    <button onclick="refreshList()">刷新列表</button>
+    <button onclick="addLocalFolder()" style="background:#4CAF50;">📁 添加本地文件夹</button>
+    <input type="file" id="localFolderInput" webkitdirectory directory multiple style="display:none;" onchange="handleLocalFolder(event)">
+    <button onclick="selectAllSongs()">全选</button>
+    <button onclick="deselectAllSongs()">取消全选</button>
+    <button onclick="downloadSelected()">下载选中</button>
+    <button onclick="downloadAll()">下载全部</button>
+    <button onclick="deleteSelected()" style="background:#f44336;">删除选中</button>
+    <button onclick="clearCache()" style="background:#ff9800;">清除缓存</button>
+  </div>
+  <div class="manage-info">
+    <span id="selectedCount">已选择: 0</span>
+    <span style="margin-left:20px;" id="cachedCount">已缓存: 0</span>
+  </div>
+  <div class="progress-container" id="progressContainer">
+    <div id="progressText">进度: 0/0</div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressBarFill"></div>
+    </div>
+  </div>
+  <div class="manage-song-list" id="manageSongList"></div>
+</section>
+
+</div>
+
+<dialog id="songDialog">
+  <h3>选择要添加的歌曲</h3>
+  <div id="dialogSongList"></div>
+  <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
+    <button onclick="confirmAddSongs()">确认</button>
+    <button onclick="closeDialog()" style="background:#666;">取消</button>
+  </div>
+</dialog>
+
+<div class="navbar">
+  <button onclick="showPage('player')">播放器</button>
+  <button onclick="showPage('lists')">歌曲列表</button>
+  <button onclick="showPage('stats')">统计</button>
+  <button onclick="showPage('manage')">管理</button>
+</div>
+
+<script src="js/jsmediatags.min.js"></script>
+<script src="js/app.js"></script>
+<script src="js/db.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/lyrics.js"></script>
+<script src="js/player.js"></script>
+<script src="js/media-session.js"></script>
+<script src="js/lists.js"></script>
+<script src="js/manage.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>
