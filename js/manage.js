@@ -1,10 +1,11 @@
 // ========== 管理页面功能 ==========
+// ========== 备选：使用 getAllKeys 获取所有缓存的键名 ==========
 async function updateCachedSongsSet() {
   cachedSongsSet.clear();
   
   if (!db) return;
   
-  // 使用 getAllKeys 获取键名
+  // 使用 getAllKeys 只获取所有键名（比 getAll 更高效）
   const keys = await new Promise(resolve => {
     const tx = db.transaction([storeName], 'readonly');
     const store = tx.objectStore(storeName);
@@ -27,7 +28,9 @@ async function renderManageList() {
   await updateCachedSongsSet();
   const container = document.getElementById('manageSongList');
   container.innerHTML = '';
-
+  // 修复：不清空 selectedSongs，保留用户选择状态
+  // selectedSongs.clear();  // 删除或注释掉这一行
+  
   tracks.forEach((song, idx) => {
     const item = document.createElement('div');
     item.className = 'manage-song-item';
@@ -45,6 +48,7 @@ async function renderManageList() {
   });
   
   updateSelectedCount();
+  // updateCachedCount(); // 移到 updateCachedSongsSet 中统一调用
 }
 
 async function deleteSingleCache(songName) {
@@ -305,7 +309,7 @@ async function handleLocalFolder(event){
       completed++;
       updateProgress(completed, total);
       
-      // 每完成 3 个更新一次管理列表
+      // 每完成 3 个更新一次管理列表（避免太频繁）
       if(completed % 3 === 0){
         await updateCachedSongsSet();
         renderManageList();
@@ -328,11 +332,11 @@ async function handleLocalFolder(event){
     const mergedCustom = [...new Set([...(customAll?.data || []), ...newNames])];
     await dbPut('customLists', '全部歌曲', mergedCustom);
     
-    // 同步全局 tracks
+    // 同步全局 tracks（与 playlist.all 保持一致）
     tracks = mergedPlaylist;
   }
   
-  // 刷新缓存集合与各列表
+  // 收尾：刷新缓存集合与各列表
   await updateCachedSongsSet();
   renderManageList();
   renderLists();

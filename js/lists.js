@@ -55,7 +55,7 @@ async function confirmAddSongs(){
   const lists=await loadLists();
   if(!lists[targetList]) lists[targetList]=[];
 
-  // 整个列表按当前勾选状态重新写入
+  // 整个列表按当前勾选状态重新写入(不再是只在最后追加)
   const newList=[];
   checkboxes.forEach(cb=>{
     if(cb.checked){
@@ -86,7 +86,7 @@ async function deleteList(name){
   await saveLists(lists);
 }
 
-// 渲染列表
+// 渲染列表：删除全部歌曲的添加按钮，自建列表按钮改为管理
 async function renderLists(){
   const div=document.getElementById('customLists');
   div.innerHTML='';

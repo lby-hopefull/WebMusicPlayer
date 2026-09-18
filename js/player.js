@@ -1,14 +1,20 @@
 // ========== 播放控制 ==========
 async function playTrack(i){
   if(i<0||i>=currentQueue.length) return;
+  // 防重入:两次切换并发时只让最新的一次生效
+  const seq = (playTrack._seq = (playTrack._seq||0) + 1);
   await dbPut('currentList', 'lastSong', currentQueue[i]);
+  if(seq !== playTrack._seq) return; // 已有更新的切换,放弃本次
   currentTrack=i;
   const name=currentQueue[i];
   
   trackedSongs[name] = false;
   
+  // 切歌前先显式暂停,避免旧的 play() promise 被 AbortError 打断
+  try{ audio.pause(); }catch(e){}
   let audioUrl;
   const cached=await getMusic(name);
+  if(seq !== playTrack._seq) return; // await 期间又有新切换
   let blob = null;
   if(cached){
     blob = new Blob([cached],{type:'audio/mpeg'});
@@ -22,14 +28,16 @@ async function playTrack(i){
     cacheSong(name);
   }
   
-  // 设置媒体会话
+  // 设置媒体会话（添加在这里）
   setupMediaSession();
   updateMediaSessionMetadata(name, '未知歌手', '', null);
   window.originalMediaInfo = null;
   
-  audio.play();isPlaying=true;updateBtn();highlight();
+  // play() 返回 promise,捕获 AbortError 等中断,保证自动切歌不被打断
+  audio.play().catch(err=>{ console.warn('play() 被中断:', err.name); });
+  isPlaying=true;updateBtn();highlight();
   
-  // 恢复上次播放进度
+  // 恢复上次播放进度（如果是同一首歌）
   const lastProgress = await dbGet('currentList', 'lastProgress');
   if(lastProgress && lastProgress.data && lastProgress.data.song === name) {
     if(audio.duration && lastProgress.data.progress < audio.duration * 0.95) {
@@ -40,9 +48,14 @@ async function playTrack(i){
 
 function togglePlayPause(){
   if(!audio.src)return;
-  if(isPlaying)audio.pause();
-  else audio.play();
-  isPlaying=!isPlaying;
+  // 以音频真实状态为准,避免连点后 isPlaying 标志与实际不同步
+  if(audio.paused){
+    audio.play().catch(err=>{ console.warn('play() 被中断:', err.name); });
+    isPlaying=true;
+  }else{
+    audio.pause();
+    isPlaying=false;
+  }
   updateBtn();
   updateMediaSessionPlaybackState(); 
 }
@@ -111,6 +124,37 @@ document.getElementById('progressBar').addEventListener('input',function(){
 
 audio.addEventListener('ended',()=>playNext());
 
+// ===== 加载失败自动跳过 + 播放停滞看门狗 =====
+let consecutiveFailures=0;
+audio.addEventListener('error',()=>{
+  console.warn('音频加载失败:', audio.currentSrc||audio.src);
+  if(!currentQueue.length) return;
+  if(++consecutiveFailures>Math.min(currentQueue.length,5)){
+    console.warn('连续失败过多,停止自动跳过');
+    consecutiveFailures=0;
+    return;
+  }
+  setTimeout(()=>playNext(),1000);
+});
+audio.addEventListener('playing',()=>{ consecutiveFailures=0; });
+
+let lastTimeupdateAt=Date.now(), lastHeardTime=-1;
+audio.addEventListener('timeupdate',()=>{
+  // 时间真的在走才算"活着"(防止原地重复触发)
+  if(audio.currentTime!==lastHeardTime){
+    lastHeardTime=audio.currentTime;
+    lastTimeupdateAt=Date.now();
+  }
+});
+setInterval(()=>{
+  // 正在播但 12 秒时间没动过(网络断流/服务端卡死),自动切下一首
+  if(isPlaying && !audio.paused && Date.now()-lastTimeupdateAt>12000){
+    console.warn('播放停滞,自动切下一首');
+    lastTimeupdateAt=Date.now(); // 防止切歌前的重复触发
+    playNext();
+  }
+},5000);
+
 function format(s){
   const m=Math.floor(s/60),sec=Math.floor(s%60);
   return`${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
@@ -132,7 +176,7 @@ setInterval(async () => {
   if(isPlaying && audio.src) {
     await saveCurrentProgress();
   }
-}, 3000); 
+}, 3000); // 每3秒保存一次
 // ========== 播放列表渲染 ==========
 // 拖动结束后抑制紧随其后的 click,防止松手位置误触播放
 let dragSuppressClick=false;

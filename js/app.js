@@ -11,6 +11,6 @@ let trackedSongs = {};
 let selectedSongs = new Set();
 let isDownloading = false;
 let currentLyrics = [], lyricElements = [], isUserScrollingLyrics = false;
-let lyricDelay = 0; 
-let cachedSongsSet = new Set(); 
+let lyricDelay = 0; // 歌词延迟（秒）
+let cachedSongsSet = new Set(); // 已缓存歌曲集合
 

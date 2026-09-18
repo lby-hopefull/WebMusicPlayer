@@ -1,4 +1,4 @@
-/* ========== 管理页面 ========== */
+/* ========== 管理页面 - 简化版 ========== */
 #page-manage {
   padding: 20px;
 }
@@ -123,7 +123,7 @@
   transition: width 0.3s;
 }
 
-/* 对话框 */
+/* 对话框 居中显示 */
 #songDialog {
   padding: 20px;
   border: none;

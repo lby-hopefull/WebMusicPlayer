@@ -1,10 +1,11 @@
 // ========== 系统媒体播放器控制 ==========
+// ========== 系统媒体播放器控制 ==========
 function setupMediaSession() {
   if ('mediaSession' in navigator) {
-    // 核心动作处理器：播放、暂停、上一首、下一首
+    // 1. 设置核心动作处理器：播放、暂停、上一首、下一首
     navigator.mediaSession.setActionHandler('play', () => {
       if (audio.paused) {
-        audio.play();
+        audio.play().catch(err=>{ console.warn('play() 被中断:', err.name); });
         isPlaying = true;
         updateBtn();
         updateMediaSessionPlaybackState();
@@ -21,26 +22,29 @@ function setupMediaSession() {
     });
 
     navigator.mediaSession.setActionHandler('previoustrack', () => {
-      playPrev(); // 调用上一首函数
+      playPrev(); // 调用您已有的上一首函数
     });
 
     navigator.mediaSession.setActionHandler('nexttrack', () => {
-      playNext(); // 调用下一首函数
+      playNext(); // 调用您已有的下一首函数
     });
 
-    // 快进/快退
+    // 2. 新增：支持快进/快退 (Seek)
+    // 当用户点击系统面板的快进/快退按钮时触发
     try {
       navigator.mediaSession.setActionHandler('seekbackward', (event) => {
+        // 如果事件带有偏移量（秒），则使用它，否则默认快退 10 秒
         const skipTime = event.seekOffset || 10;
         audio.currentTime = Math.max(0, audio.currentTime - skipTime);
       });
 
       navigator.mediaSession.setActionHandler('seekforward', (event) => {
+        // 如果事件带有偏移量（秒），则使用它，否则默认快进 10 秒
         const skipTime = event.seekOffset || 10;
         audio.currentTime = Math.min(audio.duration, audio.currentTime + skipTime);
       });
 
-      //进度条拖拽 (Scrubbing)
+      // 3. 新增：支持进度条拖拽 (Scrubbing)
       // 监听系统面板的拖拽事件
       navigator.mediaSession.setActionHandler('seekto', (event) => {
         if (event.fastSeek && 'fastSeek' in audio) {
@@ -88,13 +92,13 @@ function updateMediaSessionPlaybackState() {
   }
 }
 
-// 更新歌词到系统通知
+// 更新歌词到系统通知（歌曲名显示歌词，歌手栏显示"歌曲名 - 歌手"）
 function updateMediaSessionLyrics(currentLineText) {
   if ('mediaSession' in navigator && navigator.mediaSession.metadata) {
     const originalTitle = navigator.mediaSession.metadata.title;
     const originalArtist = navigator.mediaSession.metadata.artist;
     
-    // 保存原始信息，初次
+    // 保存原始信息（首次调用时）
     if (!window.originalMediaInfo) {
       window.originalMediaInfo = {
         title: originalTitle,
@@ -102,7 +106,7 @@ function updateMediaSessionLyrics(currentLineText) {
       };
     }
     
-    // 歌曲名栏显示当前歌词
+    // 歌曲名栏显示当前歌词，歌手栏显示"歌曲名 - 歌手"
     if (currentLineText && currentLineText.trim()) {
       navigator.mediaSession.metadata.title = currentLineText;
       navigator.mediaSession.metadata.artist = `${window.originalMediaInfo.title} - ${window.originalMediaInfo.artist}`;

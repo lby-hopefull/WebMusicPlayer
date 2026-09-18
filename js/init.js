@@ -57,7 +57,7 @@
   // 恢复上次播放的歌曲和进度
   if(lastSong && lastSong.data && currentQueue.includes(lastSong.data)) {
     currentTrack = currentQueue.indexOf(lastSong.data);
-    // 加载
+    // 不自动播放，只加载
     const name = currentQueue[currentTrack];
     let audioUrl;
     const cached = await getMusic(name);

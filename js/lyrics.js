@@ -265,7 +265,7 @@ function jumpToLyric(index) {
   const t = currentLyrics[index].startTime;
   if (isFinite(t)) {
     audio.currentTime = t;
-    audio.play(); isPlaying = true; updateBtn();
+    audio.play().catch(err=>{ console.warn('play() 被中断:', err.name); }); isPlaying = true; updateBtn();
   }
 }
 

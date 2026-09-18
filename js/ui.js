@@ -20,12 +20,12 @@ async function adjustLyricDelay(delta) {
     lyricDelay += delta;
     lyricDelay = Math.round(lyricDelay * 100) / 100;
     
-    // 计算需要存入数据库的数值
+    // 计算需要存入数据库的数值（显示值 - 0.5）
     const actualDelayToSave = lyricDelay;
     
     document.getElementById('lyricDelayValue').textContent = lyricDelay.toFixed(2) + 's';
     
-    // 保存时：存入
+    // 保存时：存入 (显示值 - 0.5)
     await dbPut('setting', 'lyricDelay', actualDelayToSave);
 }
 
