@@ -11,12 +11,54 @@ function parseTimeToSeconds(timeStr) {
 // 最后一行没有"下一行"可依,用一个兜底时长
 const LAST_LINE_FALLBACK = 3;
 
+// 在已解析的行里找"起始时间相同"的那一行(从后往前取最近的一个)。
+// 用它代替"只看紧邻的上一行":中间夹了空行/注释行或别的行也能配上,
+// 翻译行排在原文之前或之后都不影响。
+function findLineByStartTime(entries, time, tol) {
+  for (let k = entries.length - 1; k >= 0; k--) {
+    if (Math.abs(entries[k].startTime - time) <= tol) return entries[k];
+  }
+  return null;
+}
+
+// 把一行 LRC 按"每个时间戳后面跟一段文字"切成片段。
+// 增强型(逐字/逐词)歌词正是这个结构;翻译行和普通行则只有一段文字。
+function splitLrcSlots(rawLine, matches) {
+  const slots = [];
+  for (let j = 0; j < matches.length; j++) {
+    const startIdx = matches[j].index + matches[j][0].length;
+    const endIdx = j < matches.length - 1 ? matches[j + 1].index : rawLine.length;
+    slots.push(rawLine.substring(startIdx, endIdx).trim());
+  }
+  return slots;
+}
+
+// 片段清洗:去掉尾部标点、去掉中文之间多余的空格(沿用原实现)
+function cleanLyricText(text) {
+  return text
+    .replace(/[,\?\.!\s]+$/, '')
+    .replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2');
+}
+
+// 把逐词片段拼回整行文本。
+// 原实现直接 textContent += word,英文歌词会拼成 "Helloworld";
+// 这里只在"前后都是 ASCII 可见字符"时补空格,中文之间与中英交界都不补(与原有行为一致)。
+function joinWordTexts(words) {
+  const isAscii = c => c && c.charCodeAt(0) < 128 && !/\s/.test(c);
+  let out = '';
+  for (const w of words) {
+    if (out && isAscii(out[out.length - 1]) && isAscii(w[0])) out += ' ';
+    out += w;
+  }
+  return out;
+}
+
 function parseLyrics(lyricText) {
   if (!lyricText || typeof lyricText !== 'string') return [];
   
   const lines = lyricText.split('\n');
-  const lyrics = [];
-  let lastMainLine = null;
+  const entries = [];      // 解析出的行(含暂时定不了身份的翻译候选)
+  const candidates = [];   // 时间范围型翻译候选,循环结束后统一关联
   
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i].trim();
@@ -28,73 +70,98 @@ function parseLyrics(lyricText) {
     
     if (matches.length === 0) continue;
     
-    // 判断是否为翻译行：
-    // 1. 行首行尾时间戳相同 [00:38.62]...[00:38.62]
-    // 2. 或者内容全是中文（不含英文字母）
     const firstTag = matches[0][0];
     const lastTag = matches[matches.length - 1][0];
     const contentWithoutTags = rawLine.replace(/\[.*?\]/g, '').trim();
     const isChineseOnly = /^[\u4e00-\u9fa5\s，。？！、：""''（）]+$/.test(contentWithoutTags);
-    const isTranslateLine = (firstTag === lastTag && matches.length > 1) || (isChineseOnly && matches.length === 1 && lastMainLine && Math.abs(parseTimeToSeconds(firstTag) - lastMainLine.startTime) < 0.01);
-    
-    if (isTranslateLine && lastMainLine) {
-      // 这是翻译行，附加到上一行
-      lastMainLine.translate = contentWithoutTags;
-      continue;
+    const firstTime = parseTimeToSeconds(firstTag);
+    const lastTime = parseTimeToSeconds(lastTag);
+
+    // 非空片段数 ≥ 2 才是逐词/逐字行 —— 这是把"逐词中文行"和"翻译行"分开的关键判据:
+    //   [00:12.00]好[00:12.00]吗  → 2 段文字,是逐字行
+    //   [00:38.62][00:38.62]译文  → 1 段文字,才是翻译行
+    // 只按"首尾时间戳相同"判断的话,前者会被整行当成翻译吞掉(不显示也不高亮)。
+    const slots = splitLrcSlots(rawLine, matches);
+    const textSlots = slots.filter(s => s);
+
+    // ---- 翻译行:三种形态,命中就 continue,绝不进入歌词数组 ----
+    // A) [t][t]译文 —— 重复前缀时间戳,正文只出现在最后一个时间戳之后
+    if (matches.length > 1 && firstTag === lastTag && textSlots.length <= 1) {
+      const near = findLineByStartTime(entries, firstTime, 0.01);
+      if (near && contentWithoutTags) { near.translate = contentWithoutTags; continue; }
     }
+    // B) [t]译文 —— 单个时间戳的中文行,时间与上一行相同(A2 扩展格式)
+    if (matches.length === 1 && isChineseOnly) {
+      const near = findLineByStartTime(entries, firstTime, 0.01);
+      if (near && contentWithoutTags) { near.translate = contentWithoutTags; continue; }
+    }
+    // C) [t1]译文[t2] —— 两个不同时间戳、不是逐词、纯中文:时间范围型翻译(格式 A)。
+    //    它配哪一行要看别的行,所以先挂起,循环结束后按"区间完全包住"关联;
+    //    关联不上就退回普通行显示,不会丢内容。
+    const isRangeTranslate = matches.length === 2 && firstTag !== lastTag &&
+      textSlots.length <= 1 && isChineseOnly && !!contentWithoutTags;
     
-    // 解析原文行
+    // ---- 正文行 ----
     const lineObj = {
       type: 'normal',
-      startTime: parseInt(matches[0][1]) * 60 + parseInt(matches[0][2]) + parseInt(matches[0][3].padEnd(3, '0')) / 1000,
+      startTime: firstTime,
+      endTime: null,
       text: '',
       translate: null,
-      words: []
+      words: [],
+      rangeStart: firstTime,   // 关联翻译用的时间范围(不会被后面改写的 endTime 影响)
+      rangeEnd: lastTime
     };
     
-    // 判断是否为逐词/逐字歌词（多个时间戳）
-    if (matches.length > 1) {
-      // 逐词解析
-      let textContent = '';
+    if (textSlots.length >= 2) {
+      // 逐词/逐字行
       for (let j = 0; j < matches.length; j++) {
-        const match = matches[j];
-        const time = parseInt(match[1]) * 60 + parseInt(match[2]) + parseInt(match[3].padEnd(3, '0')) / 1000;
-        
-        // 提取该时间戳后的文本，直到下一个时间戳或行尾
-        const startIdx = match.index + match[0].length;
-        const endIdx = j < matches.length - 1 ? matches[j + 1].index : rawLine.length;
-        let word = rawLine.substring(startIdx, endIdx).trim();
-        
-        // 清理尾部标点
-        word = word.replace(/[,\?\.!\s]+$/, '');
-        // 删除中文间不必要的空格
-        word = word.replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2');
-        
-        if (word) {
-          lineObj.words.push({
-            text: word,
-            startTime: time,
-            endTime: j < matches.length - 1 ? 
-              parseInt(matches[j + 1][1]) * 60 + parseInt(matches[j + 1][2]) + parseInt(matches[j + 1][3].padEnd(3, '0')) / 1000 :
-              time 
-          });
-          textContent += word;
-        }
+        const word = cleanLyricText(slots[j]);
+        if (!word) continue;
+        lineObj.words.push({
+          text: word,
+          startTime: parseTimeToSeconds(matches[j][0]),
+          endTime: j < matches.length - 1
+            ? parseTimeToSeconds(matches[j + 1][0])
+            : parseTimeToSeconds(matches[j][0])
+        });
       }
-      
-      lineObj.text = textContent;
+      lineObj.text = joinWordTexts(lineObj.words.map(w => w.text));
       lineObj.type = lineObj.words.length > 1 ? 'word-by-word' : 'normal';
     } else {
-      // 普通行，单个时间戳
-      lineObj.text = contentWithoutTags;
-      // 删除中文间不必要的空格
-      lineObj.text = lineObj.text.replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2');
+      // 普通行(含 [t1]原文[t2] 这种只带一段文字、时间戳成对出现的行)
+      lineObj.text = cleanLyricText(contentWithoutTags);
     }
     
-    lyrics.push(lineObj);
-    lastMainLine = lineObj;
+    entries.push(lineObj);
+    if (isRangeTranslate) {
+      lineObj.isCandidate = true;
+      candidates.push(lineObj);
+    }
   }
-  
+
+  // ---- 关联时间范围型翻译:被候选区间"完整包住"的那一行才是原文 ----
+  // 用区间包含而不是"只看上一行",翻译行排在原文之前或之后都能配上。
+  const COVER_EPS = 0.05;   // 容忍几毫秒舍入差,同时排除"只是相邻/部分重叠"的行
+  candidates.forEach(cand => {
+    if (cand.claimed) return;   // 它自己已经是别人的原文,要保留显示
+    let best = null;
+    for (const line of entries) {
+      if (line === cand || line.translate || line.claimed) continue;
+      if (cand.rangeStart <= line.rangeStart - COVER_EPS &&
+          cand.rangeEnd >= line.rangeEnd + COVER_EPS) {
+        const span = line.rangeEnd - line.rangeStart;
+        if (!best || span > best.span) best = { line, span };
+      }
+    }
+    if (best) {
+      best.line.translate = cand.text;
+      best.line.claimed = true;
+      cand.remove = true;
+    }
+  });
+
+  const lyrics = entries.filter(e => !e.remove);
   lyrics.sort((a, b) => a.startTime - b.startTime);
 
   // ---- 统一补齐 endTime ----
@@ -106,12 +173,21 @@ function parseLyrics(lyricText) {
       ? nextStart
       : line.startTime + LAST_LINE_FALLBACK;
 
-    // 逐字行的最后一个字后面没有时间戳了,补到行结束时间,
-    // 否则它会从"瞬间跳满"或(前后时间戳相同时)干脆不亮
+    // 逐字行的最后一个字后面没有时间戳了,补到下一行开始,
+    // 否则它会从"瞬间跳满"或(前后时间戳相同时)干脆不亮。
+    // 注意兜底值要拿"这个字自己的起点"往后推:整行只有一个字、
+    // 而行的起点又早于它时,用行起点+3 会算出比它起点还早的结束时间。
     if (line.words.length) {
       const last = line.words[line.words.length - 1];
-      if (!(last.endTime > last.startTime)) last.endTime = line.endTime;
+      if (!(last.endTime > last.startTime)) {
+        last.endTime = (nextStart !== null && nextStart > last.startTime)
+          ? nextStart
+          : last.startTime + LAST_LINE_FALLBACK;
+      }
     }
+
+    // 清掉只在解析期用到的内部标记
+    delete line.isCandidate; delete line.remove; delete line.claimed;
   }
 
   return lyrics;
