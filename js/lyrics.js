@@ -143,15 +143,19 @@ function parseLyrics(lyricText) {
     let target = null;
 
     if (cand.kind === 'range') {
-      // 格式 A:翻译行用一段区间盖住原文行。判据 = 起点不晚于原文、结束晚于原文。
-      // 起点要允许"相等":真实文件里翻译行和原文共用同一个起始时间戳是最常见写法
-      // (如 [00:46.761]Good...[00:49.882] 配 [00:46.761]无论早晚...[00:50.540]),
-      // 要求起点严格更早会把这种情况全部漏掉。
-      // 结束必须严格更晚 —— 这样"三行首尾相接"的普通文件不会互相误判成翻译。
+      // 格式 A:翻译行用一段区间盖住原文行。判据 = 起点不晚于原文、结束不早于原文。
+      // 两头都必须容差,原因是真实文件里译文的时间戳只是"照抄"原文的近似值:
+      //   起点:与原文完全相同是最常见写法
+      //        ([00:46.761]Good...[00:49.882] 配 [00:46.761]无论早晚...[00:50.540])
+      //   结束:LDDC 生成的逐字歌词里,译文结束普遍比原文结束早 1~9ms,或干脆相等
+      //        ([00:16.423]...hot[00:17.992] 配 [00:16.423]烈焰燃起...[00:17.990])
+      //        末行 [03:04.110]Link[03:04.796] 配 [03:04.110]相连[03:04.796] 起止全等
+      // 容差只有 50ms,所以"三行首尾相接"的普通文件依然不会被互相误判:
+      // 相邻行的结束相差整整一行,远大于容差。
       let best = null;
       for (const line of pool) {
         if (cand.rangeStart <= line.rangeStart + COVER_EPS &&
-            cand.rangeEnd >= line.rangeEnd + COVER_EPS) {
+            cand.rangeEnd >= line.rangeEnd - COVER_EPS) {
           const span = line.rangeEnd - line.rangeStart;
           if (!best || span > best.span) best = { line, span };
         }
@@ -529,8 +533,14 @@ function updateLyricHighlight() {
   if (wi < activeWordIdx) {
     // 行内回退,整行重算
     setLineFill(row, ct);
+  } else if (wi > activeWordIdx + 1) {
+    // 行内前跳:拖动进度条、点击进度条、或某一帧跨过了好几个字
+    // (逐字歌词快的时候 100ms 一个字,掉一两帧就能跳过 2 个以上)。
+    // 这里必须整行重算:老写法只把 activeWordIdx 那一个字定格为满格,
+    // 中间被跨过的字会永远停在 0 —— 表现为"拖到中间,前面几个字却没点亮"。
+    setLineFill(row, ct);
   } else if (wi !== activeWordIdx && activeWordIdx >= 0) {
-    setWordFill(row, activeWordIdx, 1);      // 上一个字定格为满格
+    setWordFill(row, activeWordIdx, 1);      // 正常推进:上一个字定格为满格
   }
   activeWordIdx = wi;
   if (wi >= 0) setWordFill(row, wi, wordFill(row.words[wi], ct));
