@@ -496,12 +496,19 @@ function updateLyricHighlight() {
     const goingBack = lineIdx < activeLineIdx;
 
     if (goingBack) {
-      // 往前跳(拖动进度条 / 点击歌词):把后面所有行的残留高亮一次清干净,
+      // 往回跳(拖动进度条 / 点击前面的歌词):把后面所有行的残留高亮一次清干净,
       // 其中就包含"正在离开的那一行"—— 回退时它是未来,不能标成已唱完
       resetRowsFrom(lineIdx + 1);
-    } else if (activeLineIdx >= 0) {
-      const prev = lyricRows[activeLineIdx];
-      if (prev) clearRowState(prev);
+    } else {
+      // 往前跳:把被跳过的整段(从离开的那一行到新行的前一行)全部定格为"已唱"。
+      // 老写法只 clearRowState(上一行),跨越超过一行时中间那段会停留在
+      // "还没播放"的样子 —— 表现为拖动进度条/点击靠后的歌词后,跳过的一整段歌词不亮。
+      // 起始位置取 max(0, activeLineIdx):activeLineIdx 为 -1(还没进入任何一行)时
+      // 从第一行开始标记,这样"跳到第 N 行"的终态与"一路播到第 N 行"完全一致。
+      for (let i = Math.max(0, activeLineIdx); i < lineIdx; i++) {
+        const skipped = lyricRows[i];
+        if (skipped) clearRowState(skipped);
+      }
     }
 
     activeLineIdx = lineIdx;
