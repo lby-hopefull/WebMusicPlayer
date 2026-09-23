@@ -11,16 +11,6 @@ function parseTimeToSeconds(timeStr) {
 // 最后一行没有"下一行"可依,用一个兜底时长
 const LAST_LINE_FALLBACK = 3;
 
-// 在已解析的行里找"起始时间相同"的那一行(从后往前取最近的一个)。
-// 用它代替"只看紧邻的上一行":中间夹了空行/注释行或别的行也能配上,
-// 翻译行排在原文之前或之后都不影响。
-function findLineByStartTime(entries, time, tol) {
-  for (let k = entries.length - 1; k >= 0; k--) {
-    if (Math.abs(entries[k].startTime - time) <= tol) return entries[k];
-  }
-  return null;
-}
-
 // 把一行 LRC 按"每个时间戳后面跟一段文字"切成片段。
 // 增强型(逐字/逐词)歌词正是这个结构;翻译行和普通行则只有一段文字。
 function splitLrcSlots(rawLine, matches) {
@@ -84,22 +74,18 @@ function parseLyrics(lyricText) {
     const slots = splitLrcSlots(rawLine, matches);
     const textSlots = slots.filter(s => s);
 
-    // ---- 翻译行:三种形态,命中就 continue,绝不进入歌词数组 ----
-    // A) [t][t]译文 —— 重复前缀时间戳,正文只出现在最后一个时间戳之后
-    if (matches.length > 1 && firstTag === lastTag && textSlots.length <= 1) {
-      const near = findLineByStartTime(entries, firstTime, 0.01);
-      if (near && contentWithoutTags) { near.translate = contentWithoutTags; continue; }
+    // ---- 翻译行候选:统一挂起,循环结束后再关联(关联上就从歌词里移除) ----
+    // 形态分三类,判据只依赖这一行自己的结构:
+    //   dup    同一行写了两个相同时间戳、正文只有一块 —— 翻译行的典型写法
+    //   single 单个时间戳的纯中文行 —— A2 扩展格式
+    //   range  两个不同时间戳、正文只有一块 —— 格式 A(翻译行用一段区间盖住原文行)
+    // 逐词行(textSlots >= 2)绝不能落进这里,否则整行会被当翻译吞掉。
+    let candKind = null;
+    if (contentWithoutTags) {
+      if (matches.length > 1 && firstTag === lastTag && textSlots.length <= 1) candKind = 'dup';
+      else if (matches.length === 1 && isChineseOnly) candKind = 'single';
+      else if (matches.length === 2 && firstTag !== lastTag && textSlots.length <= 1 && isChineseOnly) candKind = 'range';
     }
-    // B) [t]译文 —— 单个时间戳的中文行,时间与上一行相同(A2 扩展格式)
-    if (matches.length === 1 && isChineseOnly) {
-      const near = findLineByStartTime(entries, firstTime, 0.01);
-      if (near && contentWithoutTags) { near.translate = contentWithoutTags; continue; }
-    }
-    // C) [t1]译文[t2] —— 两个不同时间戳、不是逐词、纯中文:时间范围型翻译(格式 A)。
-    //    它配哪一行要看别的行,所以先挂起,循环结束后按"区间完全包住"关联;
-    //    关联不上就退回普通行显示,不会丢内容。
-    const isRangeTranslate = matches.length === 2 && firstTag !== lastTag &&
-      textSlots.length <= 1 && isChineseOnly && !!contentWithoutTags;
     
     // ---- 正文行 ----
     const lineObj = {
@@ -110,7 +96,8 @@ function parseLyrics(lyricText) {
       translate: null,
       words: [],
       rangeStart: firstTime,   // 关联翻译用的时间范围(不会被后面改写的 endTime 影响)
-      rangeEnd: lastTime
+      rangeEnd: lastTime,
+      seq: entries.length      // 文件里的先后次序,关联 dup/single 时要用
     };
     
     if (textSlots.length >= 2) {
@@ -134,29 +121,65 @@ function parseLyrics(lyricText) {
     }
     
     entries.push(lineObj);
-    if (isRangeTranslate) {
-      lineObj.isCandidate = true;
+    if (candKind) {
+      lineObj.kind = candKind;
+      // 翻译文案原样保留:中文之间的空格常是作者断句用的,
+      // 原实现也是直接 contentWithoutTags 赋给 translate,不做清理
+      lineObj.text = contentWithoutTags;
       candidates.push(lineObj);
     }
   }
 
-  // ---- 关联时间范围型翻译:被候选区间"完整包住"的那一行才是原文 ----
-  // 用区间包含而不是"只看上一行",翻译行排在原文之前或之后都能配上。
-  const COVER_EPS = 0.05;   // 容忍几毫秒舍入差,同时排除"只是相邻/部分重叠"的行
+  // ---- 关联翻译行:三类形态各自匹配;关联不上的退回普通行显示,不丢内容 ----
+  const COVER_EPS = 0.05;   // 容忍几毫秒舍入差,同时排除"只是相邻/部分重叠"的普通文件
+  const NEAR_LIMIT = 5;     // dup 兜底配对允许的最大时间距离(秒)
+
+  const distTo = (line, t) => t < line.rangeStart ? line.rangeStart - t
+                           : (t > line.rangeEnd ? t - line.rangeEnd : 0);
+
   candidates.forEach(cand => {
-    if (cand.claimed) return;   // 它自己已经是别人的原文,要保留显示
-    let best = null;
-    for (const line of entries) {
-      if (line === cand || line.translate || line.claimed) continue;
-      if (cand.rangeStart <= line.rangeStart - COVER_EPS &&
-          cand.rangeEnd >= line.rangeEnd + COVER_EPS) {
-        const span = line.rangeEnd - line.rangeStart;
-        if (!best || span > best.span) best = { line, span };
+    if (cand.claimed) return;   // 它自己已经是别人的原文了,要保留显示
+    const pool = entries.filter(l => l !== cand && !l.translate && !l.claimed);
+    let target = null;
+
+    if (cand.kind === 'range') {
+      // 格式 A:翻译行用一段区间盖住原文行。判据 = 起点不晚于原文、结束晚于原文。
+      // 起点要允许"相等":真实文件里翻译行和原文共用同一个起始时间戳是最常见写法
+      // (如 [00:46.761]Good...[00:49.882] 配 [00:46.761]无论早晚...[00:50.540]),
+      // 要求起点严格更早会把这种情况全部漏掉。
+      // 结束必须严格更晚 —— 这样"三行首尾相接"的普通文件不会互相误判成翻译。
+      let best = null;
+      for (const line of pool) {
+        if (cand.rangeStart <= line.rangeStart + COVER_EPS &&
+            cand.rangeEnd >= line.rangeEnd + COVER_EPS) {
+          const span = line.rangeEnd - line.rangeStart;
+          if (!best || span > best.span) best = { line, span };
+        }
+      }
+      if (best) target = best.line;
+    } else {
+      // dup / single:先找起始时间相同的那一行
+      const exact = pool.filter(l => Math.abs(l.startTime - cand.rangeStart) <= 0.01);
+      // single 只往前面找:两条结构一样的单时间戳中文行,谁在前谁是原文(A2 约定)。
+      // 允许往后找会出现"把原文当翻译删掉、反倒留下译文"的反向错误。
+      const scope = cand.kind === 'single' ? exact.filter(l => l.seq < cand.seq) : exact;
+      if (scope.length) {
+        target = scope[scope.length - 1];
+      } else if (cand.kind === 'dup') {
+        // 重复时间戳这种形态本身就说明它是翻译行,但它的时间戳常常不等于原文起点
+        // (实测样本里取的是原文的结束时刻),所以退一步:挂到时间上最近的那一行。
+        let near = null, nearD = Infinity;
+        for (const line of pool) {
+          const d = distTo(line, cand.rangeStart);
+          if (d < nearD) { nearD = d; near = line; }
+        }
+        if (near && nearD <= NEAR_LIMIT) target = near;
       }
     }
-    if (best) {
-      best.line.translate = cand.text;
-      best.line.claimed = true;
+
+    if (target) {
+      target.translate = cand.text;
+      target.claimed = true;
       cand.remove = true;
     }
   });
@@ -187,7 +210,7 @@ function parseLyrics(lyricText) {
     }
 
     // 清掉只在解析期用到的内部标记
-    delete line.isCandidate; delete line.remove; delete line.claimed;
+    delete line.remove; delete line.claimed; delete line.kind; delete line.seq;
   }
 
   return lyrics;
