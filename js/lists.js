@@ -3,16 +3,20 @@ async function loadLists(){
   const result = await dbGetAll('customLists');
   const lists = {};
   result.forEach(item => {
-    lists[item.id] = item.data;
+    lists[item.id] = sortSongsInPlace(item.data || []);
   });
   return lists;
 }
 
+// 整表原子写入:清空 + 写回在同一个事务里完成,中途失败会整体回滚,
+// 不会再出现"清空了旧的、新的只写了一半"的半个歌单库。
+// 顺便在这里统一按名称排序 —— 启动、建单、删单、管理歌曲全都走这一个出口
 async function saveLists(o){
-  await dbClear('customLists');
+  const entries = [];
   for(const k in o){
-    await dbPut('customLists', k, o[k]);
+    entries.push({ id: k, data: sortSongsInPlace(o[k]) });
   }
+  await dbReplaceAll('customLists', entries);
   renderLists();
 }
 
@@ -20,7 +24,7 @@ async function createList(){
   const n=document.getElementById('newListName').value.trim();
   if(!n)return;
   const lists=await loadLists();
-  if(lists[n]){alert('该列表已存在');return;}
+  if(lists[n]){await uiAlert('该列表已存在');return;}
   lists[n]=[];
   await saveLists(lists);
   document.getElementById('newListName').value = '';
@@ -31,7 +35,7 @@ async function showAddSongsDialog(listName){
   targetList=listName;
   const dialog=document.getElementById('songDialog');
   const container=document.getElementById('dialogSongList');
-  container.innerHTML='';
+  container.replaceChildren();
   
   // 修改标题
   const title = dialog.querySelector('h3');
@@ -43,8 +47,13 @@ async function showAddSongsDialog(listName){
   
   allSongsCache.forEach((song,i)=>{
     const label=document.createElement('label');
-    const checked = existingSongs.includes(song) ? 'checked' : '';
-    label.innerHTML=`<input type="checkbox" value="${i}" ${checked}> ${song}`;
+    const cb=document.createElement('input');
+    cb.type='checkbox';
+    cb.value=String(i);
+    cb.checked=existingSongs.includes(song);
+    // label 包住 input,点文字即勾选;歌名用 textContent,不参与 HTML 解析
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(' ' + song));
     container.appendChild(label);
   });
   dialog.showModal();
@@ -81,70 +90,104 @@ async function deleteSongFromList(listName,idx){
 
 async function deleteList(name){
   if(name==='全部歌曲') return;
+  // 删掉整个歌单是不可逆的,加一道确认
+  if(!(await uiConfirm(`确定删除歌单「${name}」吗？`))) return;
   const lists=await loadLists();
   delete lists[name];
   await saveLists(lists);
 }
 
 // 渲染列表：删除全部歌曲的添加按钮，自建列表按钮改为管理
+// 并发保护:showPage('lists') / saveLists / 删除操作都可能让两次渲染重叠。
+// 原来"先清空 DOM 再 await"的写法会让两次渲染各追加一份,列表直接重影;
+// 改成"先取数据、只让最新一次落地"(和 playTrack 的 _seq 同一套路)
+let renderListsSeq = 0;
+
 async function renderLists(){
+  const seq = ++renderListsSeq;
+  const lists = await loadLists();
+  if(seq !== renderListsSeq) return;   // 已经有更新的渲染在跑,放弃本次
+
   const div=document.getElementById('customLists');
-  div.innerHTML='';
-  const lists=await loadLists();
+  div.replaceChildren();
   if(!lists['全部歌曲']){ 
     lists['全部歌曲']=tracks; 
     await saveLists(lists); 
+    if(seq !== renderListsSeq) return;  // saveLists 内部又触发了一轮渲染,让新的那次落地
   }
 
-  for(const k in lists){
+  // 歌单标题也按名称排序,"全部歌曲"固定排在最前
+  const names=Object.keys(lists).sort((a,b)=>{
+    if(a==='全部歌曲') return -1;
+    if(b==='全部歌曲') return 1;
+    return a.localeCompare(b,'zh-CN',{numeric:true});
+  });
+
+  names.forEach(k=>{
     const wrap=document.createElement('div');
     wrap.className='list';
+
     const title=document.createElement('div');
     title.className='list-title';
-    title.innerHTML = `<span>${k}</span>` +
-      (k!=='全部歌曲'?`<span><button onclick="event.stopPropagation();deleteList('${k}')">删除</button><button onclick="event.stopPropagation();showAddSongsDialog('${k}')">管理</button></span>`:'');
-    title.onclick=function(e){
-      if(e.target.tagName==='BUTTON') return;
-      const ul=this.nextElementSibling;
+
+    const nameSpan=document.createElement('span');
+    nameSpan.textContent=k;                 // 歌单名走 textContent
+    title.appendChild(nameSpan);
+
+    if(k!=='全部歌曲'){
+      const btnWrap=document.createElement('span');
+
+      const delBtn=document.createElement('button');
+      delBtn.type='button';
+      delBtn.textContent='删除';
+      delBtn.setAttribute('aria-label',`删除歌单 ${k}`);
+      // 按钮自己拦下事件,标题的展开/收起就不会被误触发(不必再判断 e.target.tagName)
+      delBtn.addEventListener('click',e=>{ e.stopPropagation(); deleteList(k); });
+
+      const manageBtn=document.createElement('button');
+      manageBtn.type='button';
+      manageBtn.textContent='管理';
+      manageBtn.setAttribute('aria-label',`管理歌单 ${k} 的歌曲`);
+      manageBtn.addEventListener('click',e=>{ e.stopPropagation(); showAddSongsDialog(k); });
+
+      btnWrap.append(delBtn, manageBtn);
+      title.appendChild(btnWrap);
+    }
+
+    title.addEventListener('click',()=>{
+      const ul=title.nextElementSibling;
       ul.style.display = ul.style.display==='none'?'block':'none';
-    };
+    });
     wrap.appendChild(title);
 
     const ul=document.createElement('div');
     ul.style.display='none';
-    lists[k].forEach((song,idx)=>{
+    (lists[k]||[]).forEach((song)=>{
       const item=document.createElement('div');
       item.className='song-item';
       item.style.cursor = 'pointer';
-      item.innerHTML=`<span>${song}</span>`;
-      item.onclick=()=>playListRandomFromSong(k,song);
+      const songSpan=document.createElement('span');
+      songSpan.textContent=song;            // 歌名走 textContent
+      item.appendChild(songSpan);
+      // 点歌单里的某首歌:按歌单当前顺序建队列,从这首歌开始播
+      item.addEventListener('click',()=>playFromList(k,song));
       ul.appendChild(item);
     });
     wrap.appendChild(ul);
     div.appendChild(wrap);
-  }
+  });
 }
 
-async function playListRandomFromSong(listName,song){
+// 从歌单点歌:队列 = 该歌单的当前顺序(已按名称排序),起点就是点击的那首
+// 原实现会把点击项提到队首再把其余随机打乱,"下一首"变得完全不可预期
+async function playFromList(listName,song){
   const lists=await loadLists();
-  if(!lists[listName] || lists[listName].length===0) return;
-  const fullList=[...lists[listName]];
-  if(fullList.length === 0) return;
+  const fullList=lists[listName] || [];
+  if(fullList.length===0) return;
+  currentQueue=[...fullList];
   const index=fullList.indexOf(song);
-  if(index<0) { 
-    currentQueue = [...fullList];
-    currentTrack = 0;
-  } else {
-    const first=fullList.splice(index,1);
-    for(let i=fullList.length-1;i>0;i--){
-      const j=trueRandom(i+1);
-      [fullList[i],fullList[j]]=[fullList[j],fullList[i]];
-    }
-    currentQueue=[...first,...fullList];
-    currentTrack=0;
-  }
+  currentTrack = index >= 0 ? index : 0;
   await dbPut('currentList', 'queue', currentQueue);
   renderPlaylist();
   playTrack(currentTrack);
 }
-

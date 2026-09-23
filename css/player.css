@@ -275,10 +275,24 @@
 }
 
 /* 歌词行样式 - 可调整参数 */
+/* 行状态一律用 class 表达:JS 不再每帧写 style.transform / style.opacity,
+   样式重算只在"换行"这一刻发生一次,行内推进只动一个字 */
 .lyric-line-container {
   padding: 12px 0;  /* 行间距：上下内边距控制行间距 */
   cursor: pointer;
-  transition: all 0.3s ease;
+  opacity: 0.5;                                        /* 未播放 */
+  transform: scale(1);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.lyric-line-container.sung-line {                      /* 已唱过 */
+  opacity: 0.7;
+}
+.lyric-line-container.active-line {                    /* 正在唱(翻译行是它的子节点,缩放/透明度自动同步) */
+  opacity: 1;
+  transform: scale(1.03);
+}
+.lyric-line-container.active-line .lyric-word-bg {
+  color: #444;                                         /* 当前行底字加深,与填充色拉开层次 */
 }
 
 /* 原文容器 */
@@ -306,8 +320,9 @@
   color: #2196F3;  /* 已播放字的颜色 */
   overflow: hidden;
   white-space: nowrap;
-  width: 0%;
-  transition: width 0.05s linear;  /* 逐字填充过渡时间 */
+  /* 填充宽度由 JS 通过 --fill(0~1) 变量逐帧写入:rAF 本身就是 60fps,
+     不需要再用 transition 补帧(反而会滞后一帧) */
+  width: calc(var(--fill, 0) * 100%);
 }
 
 /* 普通行样式 */
@@ -337,5 +352,13 @@
 .lyric-translate.active {
   color: #333;
   font-weight: 500;
+}
+
+/* 无歌词时的占位(原来写在 JS 的 cssText 里) */
+.lyrics-empty {
+  text-align: center;
+  color: #999;
+  padding-top: 40vh;
+  font-size: 18px;
 }
 

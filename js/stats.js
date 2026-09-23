@@ -14,15 +14,23 @@ async function renderStats(){
   const stats = await dbGet('playStats', 'songs');
   const s = stats ? (stats.data || {}) : {};
   const d=document.getElementById('stats');
-  d.innerHTML='';
+  d.replaceChildren();
   const sortedStats = Object.entries(s).sort((a, b) => b[1] - a[1]);
   if(sortedStats.length === 0) {
-    d.innerHTML = '<div style="text-align:center;color:#999;">暂无播放记录</div>';
+    const empty = document.createElement('div');
+    empty.className = 'empty-hint';
+    empty.textContent = '暂无播放记录';
+    d.appendChild(empty);
     return;
   }
   sortedStats.forEach(([song, count]) => {
     const div = document.createElement('div');
-    div.innerHTML = `<span>${song}</span><span>${count} 次</span>`;
+    // 歌名一律走 textContent:文件名里的 <img onerror=...> 之类只会显示成普通文字
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = song;
+    const countSpan = document.createElement('span');
+    countSpan.textContent = `${count} 次`;
+    div.append(nameSpan, countSpan);
     d.appendChild(div);
   });
 }

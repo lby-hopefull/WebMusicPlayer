@@ -16,10 +16,7 @@
     document.getElementById('playMode').value = playModeSetting.data;
   }
   
-  // 播放模式改变时保存
-  document.getElementById('playMode').addEventListener('change', async function() {
-    await dbPut('setting', 'playMode', this.value);
-  });  
+  // 播放模式改变时保存 —— 事件接线统一收口到 bindings.js
   
   // 加载歌词延迟
   await loadLyricDelay();
@@ -29,7 +26,8 @@
     if (response.ok) {
       const serverTracks = await response.json();
       const savedTracks = await dbGet('playlist', 'all');
-      tracks = [...new Set([...(savedTracks?.data || []), ...serverTracks])];
+      // 启动即按名称排序(自然序),和写入时保持同一份顺序
+      tracks = sortSongsInPlace([...new Set([...(savedTracks?.data || []), ...serverTracks])]);
       await dbPut('playlist', 'all', tracks);
     } else {
       throw new Error('服务器响应错误');
@@ -41,8 +39,11 @@
     else tracks = [];
   }
 
+  // 启动即归一化:无论走服务器列表还是本地缓存,都让 tracks / 全部歌曲 / playlist.all
+  // 保持同一份"按名称排序"的结果(排序在同一份数组引用上就地完成)
   const lists = await loadLists();
-  lists['全部歌曲'] = tracks;
+  lists['全部歌曲'] = sortSongsInPlace(tracks);
+  await dbPut('playlist', 'all', tracks);
   await saveLists(lists);
   const savedQueue = await dbGet('currentList', 'queue');
   const lastSong = await dbGet('currentList', 'lastSong');

@@ -61,7 +61,10 @@ function togglePlayPause(){
 }
 
 function updateBtn(){
-  document.getElementById('playPauseBtn').textContent=isPlaying?'⏸':'▶';
+  const btn=document.getElementById('playPauseBtn');
+  btn.textContent=isPlaying?'⏸':'▶';
+  // 按钮内容只有符号,无障碍名必须跟着状态走
+  btn.setAttribute('aria-label', isPlaying?'暂停':'播放');
 }
 
 async function playNext(){
@@ -106,7 +109,7 @@ audio.addEventListener('timeupdate',()=>{
   if(audio.duration){
     document.getElementById('progressBar').value=(audio.currentTime/audio.duration)*100;
     document.getElementById('trackProgress').textContent=format(audio.currentTime)+'/'+format(audio.duration);
-    updateLyricHighlight();
+    // 歌词高亮改由 requestAnimationFrame 驱动(见 lyrics.js),timeupdate 只有 ~4Hz,撑不起逐字动画
     updateMediaSessionPositionState(); 
     if(audio.duration > 0 && audio.currentTime / audio.duration >= 0.8) {
       const currentSong = currentQueue[currentTrack];
@@ -146,14 +149,22 @@ audio.addEventListener('timeupdate',()=>{
     lastTimeupdateAt=Date.now();
   }
 });
-setInterval(()=>{
-  // 正在播但 12 秒时间没动过(网络断流/服务端卡死),自动切下一首
-  if(isPlaying && !audio.paused && Date.now()-lastTimeupdateAt>12000){
-    console.warn('播放停滞,自动切下一首');
-    lastTimeupdateAt=Date.now(); // 防止切歌前的重复触发
-    playNext();
-  }
-},5000);
+// 停滞看门狗:每 5 秒检查一次,"正在播但 12 秒进度没动过"就自动切下一首
+let stallTimerId=null;
+function startStallWatch(){
+  if(stallTimerId!==null) return;
+  lastTimeupdateAt=Date.now(); // 从后台切回来必须重置,否则会立刻被误判为停滞
+  stallTimerId=setInterval(()=>{
+    if(isPlaying && !audio.paused && Date.now()-lastTimeupdateAt>12000){
+      console.warn('播放停滞,自动切下一首');
+      lastTimeupdateAt=Date.now(); // 防止切歌前的重复触发
+      playNext();
+    }
+  },5000);
+}
+function stopStallWatch(){
+  if(stallTimerId!==null){ clearInterval(stallTimerId); stallTimerId=null; }
+}
 
 function format(s){
   const m=Math.floor(s/60),sec=Math.floor(s%60);
@@ -171,12 +182,35 @@ async function saveCurrentProgress() {
   }
 }
 
-// 定期保存进度
-setInterval(async () => {
-  if(isPlaying && audio.src) {
-    await saveCurrentProgress();
+// 定期保存进度(每 3 秒)
+let progressTimerId=null;
+function startProgressTimer(){
+  if(progressTimerId!==null) return;
+  progressTimerId=setInterval(async () => {
+    if(isPlaying && audio.src) {
+      await saveCurrentProgress();
+    }
+  }, 3000);
+}
+function stopProgressTimer(){
+  if(progressTimerId!==null){ clearInterval(progressTimerId); progressTimerId=null; }
+}
+
+// 计时器只在页面可见时跑:切到后台/锁屏就停表,顺便把进度落盘一次,省电也省一次无谓轮询
+// (歌词的 rAF 循环浏览器本来就会自动暂停,回来时手动对齐一帧)
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden){
+    stopStallWatch();
+    stopProgressTimer();
+    saveCurrentProgress();
+  }else{
+    startStallWatch();
+    startProgressTimer();
+    updateLyricHighlight();
   }
-}, 3000); // 每3秒保存一次
+});
+startStallWatch();
+startProgressTimer();
 // ========== 播放列表渲染 ==========
 // 拖动结束后抑制紧随其后的 click,防止松手位置误触播放
 let dragSuppressClick=false;
@@ -186,9 +220,12 @@ document.addEventListener('click', e=>{
 
 function renderPlaylist(){
   const box=document.getElementById('playlist');
-  box.innerHTML='';
+  box.replaceChildren();
   if(currentQueue.length === 0) {
-    box.innerHTML = '<div style="text-align:center;color:#999;padding:20px;">暂无歌曲</div>';
+    const empty=document.createElement('div');
+    empty.className='empty-hint';
+    empty.textContent='暂无歌曲';
+    box.appendChild(empty);
     return;
   }
   currentQueue.forEach((t,i)=>{
@@ -201,12 +238,14 @@ function renderPlaylist(){
     nameSpan.style.whiteSpace='nowrap';
     nameSpan.style.textOverflow='ellipsis';
     d.appendChild(nameSpan);
-    d.onclick=()=>playTrack(i);
+    // 用 addEventListener 而不是 onclick 属性:可解绑、不与内联写法混用
+    d.addEventListener('click',()=>playTrack(i));
     // 右侧拖动排序把手
     const handle=document.createElement('span');
     handle.className='drag-handle';
     handle.textContent='⣿';
     handle.title='长按拖动排序';
+    handle.setAttribute('aria-label','长按拖动排序');
     d.appendChild(handle);
     attachDragSort(box, d, handle, i);
     box.appendChild(d);
@@ -371,14 +410,14 @@ async function refreshList(){
     if (!response.ok) throw new Error('获取失败');
     const serverTracks = await response.json();
     const savedTracks = await dbGet('playlist', 'all');
-    const mergedTracks = [...new Set([...(savedTracks?.data || []), ...serverTracks])];
+    const mergedTracks = sortSongsInPlace([...new Set([...(savedTracks?.data || []), ...serverTracks])]);
     tracks = mergedTracks;
     await dbPut('playlist', 'all', tracks);
     await dbPut('customLists', '全部歌曲', tracks);
     // 更新已缓存集合
     await updateCachedSongsSet();
     renderManageList();
-    alert('列表已更新');
+    await uiAlert('列表已更新');
   } catch (error) {
     console.error('获取服务器列表失败:', error);
     const saved = await dbGet('playlist', 'all');
@@ -391,5 +430,12 @@ function setVolume(value) {
   dbPut('setting', 'volume', value);
   const v=document.getElementById('volumeValue');
   if(v)v.textContent=Math.round(value);
+}
+
+// 快进/快退(键盘左右箭头与系统媒体面板共用)
+function seekBy(seconds){
+  if(!audio.src || !isFinite(audio.duration)) return;
+  audio.currentTime = Math.min(audio.duration, Math.max(0, audio.currentTime + seconds));
+  updateLyricHighlight(); // 暂停时 rAF 循环没在跑,手动对齐一帧
 }
 

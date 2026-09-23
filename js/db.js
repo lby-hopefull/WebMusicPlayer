@@ -48,6 +48,21 @@ function dbDelete(storeName, key) {
   });
 }
 
+// 整表替换:清空 + 批量写入放在同一个事务里,要么全成功要么全回滚
+// entries: [{id, data}, ...]
+function dbReplaceAll(storeName, entries) {
+  return new Promise(resolve => {
+    if(!db) return resolve(false);
+    const tx = db.transaction([storeName], 'readwrite');
+    const store = tx.objectStore(storeName);
+    store.clear();
+    (entries || []).forEach(entry => store.put(entry));
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => { console.warn('dbReplaceAll 失败:', storeName, tx.error); resolve(false); };
+    tx.onabort = () => { console.warn('dbReplaceAll 中止:', storeName, tx.error); resolve(false); };
+  });
+}
+
 function initDB(){
   return new Promise(res=>{
     const req=indexedDB.open(dbName, 4);

@@ -27,7 +27,7 @@ async function updateCachedSongsSet() {
 async function renderManageList() {
   await updateCachedSongsSet();
   const container = document.getElementById('manageSongList');
-  container.innerHTML = '';
+  container.replaceChildren();
   // 修复：不清空 selectedSongs，保留用户选择状态
   // selectedSongs.clear();  // 删除或注释掉这一行
   
@@ -35,15 +35,42 @@ async function renderManageList() {
     const item = document.createElement('div');
     item.className = 'manage-song-item';
     const isCached = cachedSongsSet.has(song);
-    
-    item.innerHTML = `
-      <div class="manage-song-name">
-        <input type="checkbox" id="song_${idx}" value="${idx}" ${selectedSongs.has(idx) ? 'checked' : ''} onchange="toggleSongSelection(${idx})">
-        <span class="cache-status ${isCached ? 'cached' : 'uncached'}">${isCached ? '已缓存' : '未缓存'}</span>
-        <label for="song_${idx}" style="cursor:pointer; flex:1;">${song}</label>
-      </div>
-      ${isCached ? `<button onclick="deleteSingleCache('${song.replace(/'/g, "\\'")}')">删除</button>` : ''}
-    `;
+
+    // 节点全部手工构建:歌名里带 < > & ' " 也只会作为普通文字显示,
+    // 不会再被拼进 innerHTML 或内联事件属性里当代码执行
+    const nameWrap = document.createElement('div');
+    nameWrap.className = 'manage-song-name';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.id = `song_${idx}`;
+    checkbox.value = String(idx);
+    checkbox.checked = selectedSongs.has(idx);
+    checkbox.setAttribute('aria-label', `选择 ${song}`);
+    checkbox.addEventListener('change', () => toggleSongSelection(idx));
+
+    const status = document.createElement('span');
+    status.className = `cache-status ${isCached ? 'cached' : 'uncached'}`;
+    status.textContent = isCached ? '已缓存' : '未缓存';
+
+    const label = document.createElement('label');
+    label.htmlFor = `song_${idx}`;
+    label.style.cursor = 'pointer';
+    label.style.flex = '1';
+    label.textContent = song;
+
+    nameWrap.append(checkbox, status, label);
+    item.appendChild(nameWrap);
+
+    if (isCached) {
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = '删除';
+      delBtn.setAttribute('aria-label', `删除 ${song} 的缓存`);
+      delBtn.addEventListener('click', () => deleteSingleCache(song));
+      item.appendChild(delBtn);
+    }
+
     container.appendChild(item);
   });
   
@@ -52,7 +79,7 @@ async function renderManageList() {
 }
 
 async function deleteSingleCache(songName) {
-  if(!confirm(`确定删除 "${songName}" 的缓存吗？`)) return;
+  if(!(await uiConfirm(`确定删除 "${songName}" 的缓存吗？`))) return;
   await dbDelete(storeName, songName);
   renderManageList();
 }
@@ -93,7 +120,7 @@ function updateCachedCount() {
 
 async function downloadSelected() {
   if(selectedSongs.size === 0) {
-    alert('请先选择歌曲');
+    await uiAlert('请先选择歌曲');
     return;
   }
   
@@ -103,7 +130,7 @@ async function downloadSelected() {
 
 async function downloadAll() {
   if(tracks.length === 0) {
-    alert('没有歌曲可下载');
+    await uiAlert('没有歌曲可下载');
     return;
   }
   await batchDownload([...tracks]);
@@ -134,15 +161,8 @@ async function batchDownload(songs) {
       
       const arrayBuffer = await response.arrayBuffer();
       
-      // 保存到 IndexedDB
-      await new Promise((resolve, reject) => {
-        if (!db) return reject(new Error('DB not initialized'));
-        const tx = db.transaction([storeName], 'readwrite');
-        const store = tx.objectStore(storeName);
-        const request = store.put({ id: song, data: arrayBuffer });
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
+      // 保存到 IndexedDB:统一走 db.js 的封装,不再手写事务
+      if (!await dbPut(storeName, song, arrayBuffer)) throw new Error('写入缓存失败');
       
       completed++;
       updateProgress(completed, total);
@@ -168,9 +188,9 @@ async function batchDownload(songs) {
   }, 2000);
   
   if (completed === total) {
-    alert('缓存完成！');
+    await uiAlert('缓存完成！');
   } else {
-    alert(`缓存完成: ${completed}/${total}，${total - completed} 个失败`);
+    await uiAlert(`缓存完成: ${completed}/${total}，${total - completed} 个失败`);
   }
 }
 
@@ -185,11 +205,11 @@ function updateProgress(current, total) {
 
 async function deleteSelected() {
   if(selectedSongs.size === 0) {
-    alert('请先选择歌曲');
+    await uiAlert('请先选择歌曲');
     return;
   }
   
-  if(!confirm(`确定删除选中的 ${selectedSongs.size} 首歌曲缓存并从所有列表中移除吗？`)) return;
+  if(!(await uiConfirm(`确定删除选中的 ${selectedSongs.size} 首歌曲缓存并从所有列表中移除吗？`))) return;
   
   const songsToDelete = Array.from(selectedSongs).map(idx => tracks[idx]);
   
@@ -231,7 +251,7 @@ async function deleteSelected() {
   await dbPut('playlist', 'all', tracks);
   await dbPut('currentList', 'queue', currentQueue);
   
-  alert('删除完成!');
+  await uiAlert('删除完成!');
   selectedSongs.clear();
   updateSelectedCount();
   renderManageList();
@@ -240,9 +260,9 @@ async function deleteSelected() {
 }
 
 async function clearCache(){
-  if(confirm('清除所有音频缓存？')) {
+  if(await uiConfirm('清除所有音频缓存？')) {
     await dbClear(storeName);
-    alert('已清除缓存');
+    await uiAlert('已清除缓存');
     renderManageList();
   }
 }
@@ -266,7 +286,7 @@ async function handleLocalFolder(event){
   const audioFiles = files.filter(f => audioExt.test(f.name));
   
   if(!audioFiles.length){
-    alert('所选文件夹中未找到音频文件');
+    await uiAlert('所选文件夹中未找到音频文件');
     return;
   }
   
@@ -298,13 +318,8 @@ async function handleLocalFolder(event){
   for(const file of newFiles){
     try {
       const arrayBuffer = await file.arrayBuffer();
-      await new Promise((resolve, reject) => {
-        if(!db) return reject(new Error('DB not initialized'));
-        const tx = db.transaction([storeName], 'readwrite');
-        const req = tx.objectStore(storeName).put({ id: file.name, data: arrayBuffer });
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
-      });
+      // 同样统一走 db.js 的封装
+      if(!await dbPut(storeName, file.name, arrayBuffer)) throw new Error('写入缓存失败');
       existingSet.add(file.name);
       completed++;
       updateProgress(completed, total);
@@ -325,11 +340,11 @@ async function handleLocalFolder(event){
     const newNames = newFiles.slice(0, completed).map(f => f.name);
     
     // 合并 playlist.all
-    const mergedPlaylist = [...new Set([...(playlistAll?.data || []), ...newNames])];
+    const mergedPlaylist = sortSongsInPlace([...new Set([...(playlistAll?.data || []), ...newNames])]);
     await dbPut('playlist', 'all', mergedPlaylist);
     
     // 合并 customLists.全部歌曲
-    const mergedCustom = [...new Set([...(customAll?.data || []), ...newNames])];
+    const mergedCustom = sortSongsInPlace([...new Set([...(customAll?.data || []), ...newNames])]);
     await dbPut('customLists', '全部歌曲', mergedCustom);
     
     // 同步全局 tracks（与 playlist.all 保持一致）
@@ -347,11 +362,11 @@ async function handleLocalFolder(event){
   }, 2000);
   
   if(total === 0){
-    alert(`未发现新歌曲（跳过 ${skipped} 个已存在或重复）`);
+    await uiAlert(`未发现新歌曲（跳过 ${skipped} 个已存在或重复）`);
   } else if(failed === 0){
-    alert(`已添加 ${completed} 首本地歌曲${skipped ? `，跳过 ${skipped} 个已存在` : ''}`);
+    await uiAlert(`已添加 ${completed} 首本地歌曲${skipped ? `，跳过 ${skipped} 个已存在` : ''}`);
   } else {
-    alert(`添加完成: ${completed} 成功，${failed} 失败${skipped ? `，${skipped} 个已跳过` : ''}`);
+    await uiAlert(`添加完成: ${completed} 成功，${failed} 失败${skipped ? `，${skipped} 个已跳过` : ''}`);
   }
 }
 

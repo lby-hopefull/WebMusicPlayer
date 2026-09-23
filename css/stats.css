@@ -18,3 +18,9 @@
   border-bottom: none;
 }
 
+/* 空状态提示是普通块级元素,不跟着上面的 flex 行样式走 */
+#stats .empty-hint {
+  display: block;
+  text-align: center;
+}
+
