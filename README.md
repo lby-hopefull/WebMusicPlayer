@@ -38,8 +38,9 @@
 | 功能模块 | 详细说明 |
 | :--- | :--- |
 | **播放控制** | 支持顺序、单曲循环、随机三种模式；支持音量调节与进度条拖拽。 |
-| **歌词显示** | 双击封面切换歌词界面；支持歌词延迟微调（±）；点击歌词行可跳转至对应时间点。 |
-| **歌单管理** | 支持创建自定义歌单，批量添加/移除歌曲；支持歌单内随机播放。 |
+| **键盘快捷键** | 空格键播放/暂停；← / → 快退/快进 5 秒（在输入框内不生效）。 |
+| **歌词显示** | 点击「显示歌词」按钮切换歌词界面；支持歌词延迟微调（±）；点击歌词行可跳转至对应时间点。 |
+| **歌单管理** | 支持创建自定义歌单，批量添加/移除歌曲；曲库与歌单按名称自然序排列，点歌单里的歌按该歌单顺序播放。 |
 | **本地导入** | 点击按钮即可选择并上传整个本地文件夹，自动识别音频文件并加入曲库。 |
 | **统计分析** | 自动记录每首歌的播放次数，支持按热度排序查看。 |
 | **数据管理** | 支持手动清除缓存、删除单曲缓存或从所有列表中移除歌曲。 |
@@ -135,8 +136,9 @@ A powerful single-file Web Music Player designed for local networks or embedded 
 | Module | Description |
 | :--- | :--- |
 | **Playback Control** | Supports sequential, single-loop, and shuffle modes; volume adjustment and progress bar scrubbing. |
-| **Lyrics Display** | Double-click the cover to toggle the lyrics view; supports lyrics delay fine-tuning (±); click a lyrics line to jump to the corresponding timestamp. |
-| **Playlist Management** | Create custom playlists, batch add/remove songs; supports shuffle within playlists. |
+| **Keyboard Shortcuts** | Space to play/pause; ← / → to seek back/forward 5 seconds (ignored while typing in a field). |
+| **Lyrics Display** | Click the "显示歌词" button to toggle the lyrics view; supports lyrics delay fine-tuning (±); click a lyrics line to jump to the corresponding timestamp. |
+| **Playlist Management** | Create custom playlists, batch add/remove songs; the library and playlists are sorted by name in natural order, and playing a song from a playlist follows that playlist's order. |
 | **Local Import** | Click a button to select and upload an entire local folder, automatically recognizing audio files and adding them to the library. |
 | **Statistics & Analytics** | Automatically records play counts for each song; supports sorting by popularity. |
 | **Data Management** | Manually clear cache, delete individual song caches, or remove songs from all lists. |
