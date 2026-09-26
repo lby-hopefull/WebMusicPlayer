@@ -162,18 +162,24 @@ function parseLyrics(lyricText) {
       }
       if (best) target = best.line;
     } else {
-      // dup / single:先找起始时间相同的那一行
-      const exact = pool.filter(l => Math.abs(l.startTime - cand.rangeStart) <= 0.01);
-      // single 只往前面找:两条结构一样的单时间戳中文行,谁在前谁是原文(A2 约定)。
-      // 允许往后找会出现"把原文当翻译删掉、反倒留下译文"的反向错误。
-      const scope = cand.kind === 'single' ? exact.filter(l => l.seq < cand.seq) : exact;
+      // dup / single:只在"文件里位于译文之前"的行里找 —— 译文行永远跟在它的原文后面,
+      // 这是 LDDC 等工具的统一写法。不限方向会撞上这种真实样本:
+      //   [03:20.095]藏文原句[03:26.713]
+      //   [03:27.074]你留下什么[03:27.074]     ← 译文,时间戳标在"下一句"的起点上
+      //   [03:27.075]下一句藏文[03:34.473]
+      // 207.074 与下一句起点 207.075 只差 1ms,"不限方向的精确匹配"会把译文
+      // 配给下一句 —— 正好配反。译文必须往回找。
+      const before = pool.filter(l => l.seq < cand.seq);
+      const exact = before.filter(l => Math.abs(l.startTime - cand.rangeStart) <= 0.01);
+      const scope = exact;
       if (scope.length) {
         target = scope[scope.length - 1];
       } else if (cand.kind === 'dup') {
         // 重复时间戳这种形态本身就说明它是翻译行,但它的时间戳常常不等于原文起点
-        // (实测样本里取的是原文的结束时刻),所以退一步:挂到时间上最近的那一行。
+        // (可能取原文的结束时刻,也可能像上面那样标在下一句的起点),所以退一步:
+        // 在前面的行里挂到时间上最近的那一行。
         let near = null, nearD = Infinity;
-        for (const line of pool) {
+        for (const line of before) {
           const d = distTo(line, cand.rangeStart);
           if (d < nearD) { nearD = d; near = line; }
         }
