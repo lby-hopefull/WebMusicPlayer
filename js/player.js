@@ -72,13 +72,14 @@ async function playNext(){
   if(currentQueue.length === 0) return;
   const mode=document.getElementById('playMode').value;
   if(mode==='random'){
-    let n;
-    if(currentQueue.length === 1) {
-      n = 0;
+    // 随机模式 = "洗过牌的队列按顺序播放":
+    // 队列内还有下一首就直接往下走,走到队尾才重新洗牌回到第一首。
+    // (老实现每次都是随机抽一首,既不保证放完一轮,也可能连着放同一首)
+    if(currentTrack < currentQueue.length - 1){
+      await playTrack(currentTrack+1);
     } else {
-      do{n=trueRandom(currentQueue.length);}while(n===currentTrack);
+      await reshuffleAndRestart();
     }
-    await playTrack(n);
   }else if(mode==='loop'){
     await playTrack(currentTrack);
   }else if(currentTrack<currentQueue.length-1){
@@ -88,21 +89,26 @@ async function playNext(){
   }
 }
 
+// 随机模式放完整个队列:重新洗牌,再从第一首开始
+async function reshuffleAndRestart(){
+  const finished = currentQueue[currentTrack];
+  shuffleArrayInPlace(currentQueue);
+  // 刚播完的这首别又立刻排到最前(队列只有一首时无所谓,不去动它)
+  if(currentQueue.length > 1 && currentQueue[0] === finished){
+    [currentQueue[0], currentQueue[1]] = [currentQueue[1], currentQueue[0]];
+  }
+  currentTrack = 0;
+  await dbPut('currentList', 'queue', currentQueue);
+  renderPlaylist();
+  await playTrack(0);
+}
+
 async function playPrev(){
   await saveCurrentProgress();
   if(currentQueue.length === 0) return;
-  const mode=document.getElementById('playMode').value;
-  if(mode==='random'){
-    let n;
-    if(currentQueue.length === 1) {
-      n = 0;
-    } else {
-      do{n=trueRandom(currentQueue.length);}while(n===currentTrack);
-    }
-    await playTrack(n);
-  }else{
-    await playTrack((currentTrack-1+currentQueue.length)%currentQueue.length);
-  }
+  // 上一首 = 队列里的前一曲,到头绕回末尾。
+  // 随机模式也走这一条:队列本身已经洗过牌,再随机抽一首会让"上一首/下一首"对不上。
+  await playTrack((currentTrack-1+currentQueue.length)%currentQueue.length);
 }
 
 audio.addEventListener('timeupdate',()=>{
@@ -384,13 +390,35 @@ function highlight(){
   document.querySelectorAll('#playlist .song').forEach((d,i)=>d.classList.toggle('playing',i===currentTrack));
 }
 
-async function shuffleQueue(){
-  if(currentQueue.length <= 1) return;
-  // 使用真随机排序
-  for(let i = currentQueue.length - 1; i > 0; i--) {
+// Fisher-Yates 洗牌,就地打乱(数组引用不变,调用方持有的别名跟着一起变)
+function shuffleArrayInPlace(arr){
+  for(let i = arr.length - 1; i > 0; i--){
     const j = trueRandom(i + 1);
-    [currentQueue[i], currentQueue[j]] = [currentQueue[j], currentQueue[i]];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
+  return arr;
+}
+
+function currentPlayMode(){
+  const el = document.getElementById('playMode');
+  return el ? el.value : 'sequential';
+}
+
+// 程序化切换播放模式。<select> 的 value 直接赋值不会触发 change 事件,
+// 所以这里必须自己把设置落库,否则刷新页面又变回原来的模式。
+async function setPlayMode(mode){
+  const el = document.getElementById('playMode');
+  if(!el || el.value === mode) return;
+  el.value = mode;
+  await dbPut('setting', 'playMode', mode);
+}
+
+async function shuffleQueue(){
+  // 队列被打乱之后,播放模式必须跟着变成随机:
+  // 否则"顺序"模式下放完最后一首又会跳回队首,和刚洗好的队列对不上。
+  await setPlayMode('random');
+  if(currentQueue.length <= 1) return;
+  shuffleArrayInPlace(currentQueue);
   currentTrack = 0;
   await dbPut('currentList', 'queue', currentQueue);
   renderPlaylist();
