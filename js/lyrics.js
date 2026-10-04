@@ -97,6 +97,7 @@ function parseLyrics(lyricText) {
       words: [],
       rangeStart: firstTime,   // 关联翻译用的时间范围(不会被后面改写的 endTime 影响)
       rangeEnd: lastTime,
+      rawSlotCount: textSlots.length,  // 这一行里有几段非空文字(1 段 = 可能是"单字行")
       seq: entries.length      // 文件里的先后次序,关联 dup/single 时要用
     };
     
@@ -197,6 +198,31 @@ function parseLyrics(lyricText) {
   const lyrics = entries.filter(e => !e.remove);
   lyrics.sort((a, b) => a.startTime - b.startTime);
 
+  // ---- 逐字风格统一:单字行也要按逐字渲染 ----
+  // 整首以逐字(逐词)歌词为主时,只有"一个字/一个词"的行如果还走普通行样式,
+  // 它就成了全曲唯一没有字级进度填充的一行(高亮只整行变色,看着像漏了一个字)。
+  // 真实样本: LDDC 输出里的单音节行 [01:36.034]Link[01:36.962],
+  // 以及带译文的那种 [03:04.110]Link[03:04.796] + [03:04.110]相连[03:04.796]。
+  const wordLines = lyrics.filter(l => l.words.length > 0).length;
+  const isWordDominated = wordLines >= 2 && wordLines * 2 > lyrics.length;
+  if (isWordDominated) {
+    lyrics.forEach(line => {
+      if (line.type !== 'normal') return;
+      if (line.words.length === 1) {
+        // 已经有时间戳、只是被上面判成普通行的单字行:改个类型就行
+        line.type = 'word-by-word';
+        return;
+      }
+      // 只有一段文字的普通行:文本本身得"短到一个单位"才升级 ——
+      // 否则一整个句子的普通行会被当成一个字,填充拉满整行。
+      if (line.words.length === 0 && line.rawSlotCount <= 1 && line.text && !/\s/.test(line.text)) {
+        const end = line.rangeEnd > line.startTime ? line.rangeEnd : line.startTime;
+        line.words = [{ text: line.text, startTime: line.startTime, endTime: end }];
+        line.type = 'word-by-word';
+      }
+    });
+  }
+
   // ---- 统一补齐 endTime ----
   // 高亮不再写死 3 秒,而是"持续到下一行开始";最后一行才用兜底时长
   for (let i = 0; i < lyrics.length; i++) {
@@ -220,7 +246,7 @@ function parseLyrics(lyricText) {
     }
 
     // 清掉只在解析期用到的内部标记
-    delete line.remove; delete line.claimed; delete line.kind; delete line.seq;
+    delete line.remove; delete line.claimed; delete line.kind; delete line.seq; delete line.rawSlotCount;
   }
 
   return lyrics;
