@@ -4,7 +4,7 @@ let tracks=[], currentQueue=[];
 const audio=new Audio();
 let db;
 const dbName='MusicPlayerDB', storeName='musicCache';
-const storeNames = ['musicCache', 'currentList', 'customLists', 'playlist', 'playStats', 'setting'];
+const storeNames = ['musicCache', 'currentList', 'customLists', 'playlist', 'playStats', 'setting', 'songMeta'];
 let targetList = '';
 let allSongsCache = [];
 let trackedSongs = {};
@@ -17,4 +17,5 @@ let lyricRows = [];
 let activeLineIdx = -1, activeWordIdx = -1, lyricRafId = null;
 let lyricDelay = 0; // 歌词延迟（秒）
 let cachedSongsSet = new Set(); // 已缓存歌曲集合
+let songMetaMap = {};           // 歌曲名 -> {addedTime, size, duration},见 songmeta.js
 

@@ -26,12 +26,18 @@ async function updateCachedSongsSet() {
 
 async function renderManageList() {
   await updateCachedSongsSet();
+  await loadSongMetaMap();             // 排序要用到时长/大小/添加时间
   const container = document.getElementById('manageSongList');
   container.replaceChildren();
   // 修复：不清空 selectedSongs，保留用户选择状态
   // selectedSongs.clear();  // 删除或注释掉这一行
-  
-  tracks.forEach((song, idx) => {
+
+  // 排序只改显示顺序:checkbox 的 value 仍是 tracks 里的原始下标,
+  // "已选择"集合、下载和删除用的下标因此不会被排序打乱。
+  const view = tracks.map((song, idx) => ({ song, idx }));
+  view.sort((a, b) => compareSongsBy(a.song, b.song, manageSortKey, manageSortDir));
+
+  view.forEach(({ song, idx }) => {
     const item = document.createElement('div');
     item.className = 'manage-song-item';
     const isCached = cachedSongsSet.has(song);
@@ -60,6 +66,13 @@ async function renderManageList() {
     label.textContent = song;
 
     nameWrap.append(checkbox, status, label);
+
+    // 元信息(时长 · 大小 · 加入时间):排序结果要看得见才好核对
+    const metaSpan = document.createElement('span');
+    metaSpan.className = 'song-meta';
+    metaSpan.textContent = songMetaBrief(song, true);
+    nameWrap.appendChild(metaSpan);
+
     item.appendChild(nameWrap);
 
     if (isCached) {
@@ -81,6 +94,7 @@ async function renderManageList() {
 async function deleteSingleCache(songName) {
   if(!(await uiConfirm(`确定删除 "${songName}" 的缓存吗？`))) return;
   await dbDelete(storeName, songName);
+  await deleteSongMeta(songName);   // 元信息(添加时间/大小/时长)同步删除
   renderManageList();
 }
 
@@ -163,7 +177,10 @@ async function batchDownload(songs) {
       
       // 保存到 IndexedDB:统一走 db.js 的封装,不再手写事务
       if (!await dbPut(storeName, song, arrayBuffer)) throw new Error('写入缓存失败');
-      
+
+      // 元信息(添加时间/大小/时长)一并记录:时长就在本地探测,不用再跑一趟网络
+      await recordSongMeta(song, { size: arrayBuffer.byteLength, blob: new Blob([arrayBuffer], { type: 'audio/mpeg' }) });
+
       completed++;
       updateProgress(completed, total);
       
@@ -243,6 +260,8 @@ async function deleteSelected() {
     
     // 删除缓存
     await dbDelete(storeName, song);
+    // 元信息同步删除,不留孤儿记录
+    await deleteSongMeta(song);
   }
   
   // 更新全部歌曲列表
@@ -320,6 +339,8 @@ async function handleLocalFolder(event){
       const arrayBuffer = await file.arrayBuffer();
       // 同样统一走 db.js 的封装
       if(!await dbPut(storeName, file.name, arrayBuffer)) throw new Error('写入缓存失败');
+      // 文件对象本身就有大小,时长本地探测一次即可
+      await recordSongMeta(file.name, { size: file.size, blob: file });
       existingSet.add(file.name);
       completed++;
       updateProgress(completed, total);

@@ -78,6 +78,34 @@ button:disabled {
   padding: 20px;
 }
 
+/* ========== 排序工具条(歌曲列表页 / 管理页共用) ========== */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #666;
+}
+.sort-bar select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  font-size: 14px;
+}
+
+/* 歌曲一行元信息(时长 · 大小 · 加入时间) */
+.song-meta {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #999;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
 /* ========== 通用对话框（替代 alert / confirm） ========== */
 /* 原生 alert/confirm 会阻塞渲染线程;改用 <dialog> + showModal,不阻塞且可样式化 */
 #appDialog {

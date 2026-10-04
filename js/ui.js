@@ -69,6 +69,42 @@ function sortSongsInPlace(list) {
   return list;
 }
 
+// ========== 歌曲排序:名称 / 时长 / 添加时间 / 文件大小 ==========
+// 歌曲列表页与管理页各有一份排序状态,默认"名称 升序"(即改动前的显示顺序)
+let listSortKey = 'name', listSortDir = 'asc';
+let manageSortKey = 'name', manageSortDir = 'asc';
+
+// 取排序用的数值(名称以外的三项都来自 songmeta.js 里的 songMetaMap)
+function songMetaValue(name, key){
+  const m = songMetaMap[name];
+  if(!m) return null;
+  const v = m[key];
+  return (typeof v === 'number' && isFinite(v)) ? v : null;
+}
+
+// 缺元信息的歌(没缓存过、也没播放过)永远排在最后,升序降序都一样 ——
+// 否则降序时"未知"会跑到最前面,看着像排序坏了。
+function compareSongsBy(a, b, key, dir){
+  const desc = dir === 'desc';
+  if(key === 'name'){
+    const c = compareSongNames(a, b);
+    return desc ? -c : c;
+  }
+  const va = songMetaValue(a, key), vb = songMetaValue(b, key);
+  if(va === null || vb === null){
+    if(va === null && vb === null) return compareSongNames(a, b);
+    return va === null ? 1 : -1;
+  }
+  let c = va - vb;
+  if(c === 0) c = compareSongNames(a, b);   // 同值时按名称,顺序稳定可预期
+  return desc ? -c : c;
+}
+
+// 生成排好序的副本。不动原数组:歌单里的顺序是用户数据,排序只影响显示。
+function sortSongsForView(list, key, dir){
+  return [...(list || [])].sort((a, b) => compareSongsBy(a, b, key, dir));
+}
+
 // ========== 通用对话框（替代 alert / confirm） ==========
 // 原生 alert/confirm 会阻塞渲染线程;这里统一用 <dialog>,
 // 文案一律走 textContent —— 歌名/歌单名不会被当成 HTML 执行

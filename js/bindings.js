@@ -31,6 +31,24 @@ document.getElementById('createListBtn').addEventListener('click', () => createL
 document.getElementById('confirmAddSongsBtn').addEventListener('click', () => confirmAddSongs());
 document.getElementById('cancelAddSongsBtn').addEventListener('click', () => closeDialog());
 
+// ---- 排序(歌曲列表页 / 管理页各自一份) ----
+document.getElementById('listSortKey').addEventListener('change', function() {
+  listSortKey = this.value;
+  renderLists();
+});
+document.getElementById('listSortDir').addEventListener('change', function() {
+  listSortDir = this.value;
+  renderLists();
+});
+document.getElementById('manageSortKey').addEventListener('change', function() {
+  manageSortKey = this.value;
+  renderManageList();
+});
+document.getElementById('manageSortDir').addEventListener('change', function() {
+  manageSortDir = this.value;
+  renderManageList();
+});
+
 // ---- 管理页 ----
 document.getElementById('refreshListBtn').addEventListener('click', () => refreshList());
 document.getElementById('addFolderBtn').addEventListener('click', () => addLocalFolder());

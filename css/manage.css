@@ -76,6 +76,12 @@
   display: flex;
   align-items: center;
 }
+/* 歌名过长时让位给右侧的元信息/删除按钮,不要撑破一行 */
+.manage-song-name label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 
 .cache-status {
   font-size: 12px;

@@ -65,7 +65,9 @@ function dbReplaceAll(storeName, entries) {
 
 function initDB(){
   return new Promise(res=>{
-    const req=indexedDB.open(dbName, 4);
+    // v5: 新增 songMeta 存储(歌曲的添加时间/大小/时长)。升版本只多建一个 store,
+    // 已有的 musicCache / 歌单等数据都原样保留。
+    const req=indexedDB.open(dbName, 5);
     req.onupgradeneeded=e=>{ 
       const database = e.target.result;
       storeNames.forEach(name => {

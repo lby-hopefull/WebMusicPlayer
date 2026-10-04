@@ -21,6 +21,10 @@ async function playTrack(i){
     audioUrl = URL.createObjectURL(blob);
     audio.src = audioUrl;
     loadSongMetadata(name, blob);
+    // 顺手补元信息:缓存数据就在手上,大小不用再读一次 idb
+    if(!(songMetaMap[name] && songMetaMap[name].size != null)){
+      recordSongMeta(name, { size: (cached.byteLength != null ? cached.byteLength : cached.size) });
+    }
   } else {
     audioUrl = '/music_play?file='+encodeURIComponent(name);
     audio.src = audioUrl;
@@ -430,7 +434,19 @@ async function cacheSong(name){
   const r=await fetch('/music_play?file='+encodeURIComponent(name));
   const b=await r.arrayBuffer();
   saveMusic(name,b);
+  // 元信息(大小/添加时间/时长)异步记录,不挡播放
+  recordSongMeta(name, { size: b.byteLength, blob: new Blob([b],{type:'audio/mpeg'}) });
 }
+
+// 时长:任何一首歌(缓存或在线流)一读出 metadata 就记下来。
+// 在线未缓存的歌只有播放过才知道时长,这里补的就是它。
+audio.addEventListener('loadedmetadata', () => {
+  const name = currentQueue[currentTrack];
+  if(!name || !isFinite(audio.duration) || audio.duration <= 0) return;
+  const meta = songMetaMap[name];
+  if(meta && meta.duration != null) return;
+  recordSongMeta(name, { duration: audio.duration });
+});
 
 async function refreshList(){
   try {

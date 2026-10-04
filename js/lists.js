@@ -107,6 +107,8 @@ async function renderLists(){
   const seq = ++renderListsSeq;
   const lists = await loadLists();
   if(seq !== renderListsSeq) return;   // 已经有更新的渲染在跑,放弃本次
+  await loadSongMetaMap();             // 排序要用到时长/大小/添加时间
+  if(seq !== renderListsSeq) return;
 
   const div=document.getElementById('customLists');
   div.replaceChildren();
@@ -162,13 +164,19 @@ async function renderLists(){
 
     const ul=document.createElement('div');
     ul.style.display='none';
-    (lists[k]||[]).forEach((song)=>{
+    // 按当前选择的排序方式展示(默认"名称 升序" = 原来的顺序)
+    sortSongsForView(lists[k]||[], listSortKey, listSortDir).forEach((song)=>{
       const item=document.createElement('div');
       item.className='song-item';
       item.style.cursor = 'pointer';
       const songSpan=document.createElement('span');
+      songSpan.className='song-name';
       songSpan.textContent=song;            // 歌名走 textContent
       item.appendChild(songSpan);
+      const metaSpan=document.createElement('span');
+      metaSpan.className='song-meta';
+      metaSpan.textContent=songMetaBrief(song);
+      item.appendChild(metaSpan);
       // 点歌单里的某首歌:按歌单当前顺序建队列,从这首歌开始播
       item.addEventListener('click',()=>playFromList(k,song));
       ul.appendChild(item);
@@ -178,14 +186,18 @@ async function renderLists(){
   });
 }
 
-// 从歌单点歌:队列 = 该歌单的当前顺序(已按名称排序),起点就是点击的那首
+// 从歌单点歌:队列 = 该歌单的当前顺序(显示什么顺序就播什么顺序),起点就是点击的那首
 // 原实现会把点击项提到队首再把其余随机打乱,"下一首"变得完全不可预期
 async function playFromList(listName,song){
   const lists=await loadLists();
-  const fullList=lists[listName] || [];
+  const fullList=sortSongsForView(lists[listName] || [], listSortKey, listSortDir);
   if(fullList.length===0) return;
+  // 随机模式:从列表点歌就直接生成一个随机队列,并从点到的那首开始放
+  if(currentPlayMode()==='random'){
+    shuffleArrayInPlace(fullList);
+  }
   currentQueue=[...fullList];
-  const index=fullList.indexOf(song);
+  const index=currentQueue.indexOf(song);
   currentTrack = index >= 0 ? index : 0;
   await dbPut('currentList', 'queue', currentQueue);
   renderPlaylist();

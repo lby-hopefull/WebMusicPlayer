@@ -16,6 +16,7 @@
 <script defer src="js/jsmediatags.min.js"></script>
 <script defer src="js/app.js"></script>
 <script defer src="js/db.js"></script>
+<script defer src="js/songmeta.js"></script>
 <script defer src="js/ui.js"></script>
 <script defer src="js/stats.js"></script>
 <script defer src="js/lyrics.js"></script>
@@ -97,6 +98,19 @@
 <!-- 歌曲列表页面 -->
 <section id="page-lists">
   <h3>自建列表</h3>
+  <div class="sort-bar">
+    <label for="listSortKey">排序:</label>
+    <select id="listSortKey" aria-label="歌曲列表排序方式">
+      <option value="name">名称</option>
+      <option value="duration">歌曲时长</option>
+      <option value="addedTime">添加时间</option>
+      <option value="size">文件大小</option>
+    </select>
+    <select id="listSortDir" aria-label="歌曲列表排序方向">
+      <option value="asc">升序</option>
+      <option value="desc">降序</option>
+    </select>
+  </div>
   <div style="display:flex; gap:10px; margin-bottom:15px;">
     <input id="newListName" placeholder="新列表名" aria-label="新列表名称" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
     <button id="createListBtn" type="button">创建</button>
@@ -127,6 +141,19 @@
   <div class="manage-info">
     <span id="selectedCount">已选择: 0</span>
     <span style="margin-left:20px;" id="cachedCount">已缓存: 0</span>
+  </div>
+  <div class="sort-bar">
+    <label for="manageSortKey">排序:</label>
+    <select id="manageSortKey" aria-label="管理列表排序方式">
+      <option value="name">名称</option>
+      <option value="duration">歌曲时长</option>
+      <option value="addedTime">添加时间</option>
+      <option value="size">文件大小</option>
+    </select>
+    <select id="manageSortDir" aria-label="管理列表排序方向">
+      <option value="asc">升序</option>
+      <option value="desc">降序</option>
+    </select>
   </div>
   <div class="progress-container" id="progressContainer">
     <div id="progressText">进度: 0/0</div>

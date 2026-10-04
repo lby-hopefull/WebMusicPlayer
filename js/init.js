@@ -88,6 +88,9 @@
   renderLists();
   renderStats();
   renderManageList();
+
+  // 老数据回填:改动前就缓存好的歌没有元信息记录,后台补一次(不挡启动)
+  setTimeout(() => { backfillSongMeta().catch(e => console.warn('元信息回填失败:', e)); }, 1500);
 })();
 // 在初始化代码块末尾添加
 window.addEventListener('beforeunload', async () => {

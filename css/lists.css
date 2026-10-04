@@ -31,6 +31,13 @@
   border-bottom: 1px solid #eee;
   background: white;
 }
+.song-item .song-name {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-right: 8px;
+}
 .song-item:last-child {
   border-bottom: none;
 }
