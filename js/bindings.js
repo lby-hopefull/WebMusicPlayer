@@ -1,9 +1,9 @@
 // ========== DOM 事件接线（统一入口） ==========
-// 页面上所有交互只在这里绑定一次。
-// 之前是"HTML 内联 onclick/oninput/onchange"和"JS addEventListener"两套写法混用:
-// 内联写法会往全局作用域塞代码、无法解绑、不利于 CSP,参数还得手动转义字符串。
-// 现在统一收口到本文件 —— 想知道某个按钮点了会发生什么,只看这一个文件。
-// 加载顺序:必须在所有业务模块之后、init.js 之前。
+// 页面上的交互事件只在本文件绑定一次。
+// 改造前，HTML 内联的 onclick / oninput / onchange 与 JS 的 addEventListener 两套写法并存：
+// 内联写法会把代码塞进全局作用域，无法解绑，不利于 CSP，参数还得手工转义。
+// 现在统一收口：要确认某个按钮点击后会做什么，只看本文件即可。
+// 加载顺序：须排在所有业务模块之后、init.js 之前。
 
 // ---- 底部导航 ----
 document.getElementById('navPlayer').addEventListener('click', () => showPage('player'));
@@ -31,7 +31,7 @@ document.getElementById('createListBtn').addEventListener('click', () => createL
 document.getElementById('confirmAddSongsBtn').addEventListener('click', () => confirmAddSongs());
 document.getElementById('cancelAddSongsBtn').addEventListener('click', () => closeDialog());
 
-// ---- 排序(歌曲列表页 / 管理页各自一份) ----
+// ---- 排序（歌曲列表页与管理页各有一份） ----
 document.getElementById('listSortKey').addEventListener('change', function() {
   listSortKey = this.value;
   renderLists();
@@ -61,18 +61,18 @@ document.getElementById('deleteSelectedBtn').addEventListener('click', () => del
 document.getElementById('clearCacheBtn').addEventListener('click', () => clearCache());
 
 // ========== 键盘快捷键 ==========
-// 空格 = 播放/暂停,← / → = 快退/快进 5 秒
+// 空格：播放或暂停；← / →：快退或快进 5 秒
 const SEEK_STEP = 5;
 
 document.addEventListener('keydown', e => {
-  // 带修饰键的组合留给浏览器(如 Ctrl+← 切换标签页)
+  // 带修饰键的组合留给浏览器（例如 Ctrl+← 切换标签页）
   if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-  // 正在输入框/下拉框里操作时不抢键:空格、方向键在表单控件里另有含义
+  // 焦点在输入框或下拉框时不拦截按键：空格与方向键在表单控件中另有含义
   const t = e.target;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
 
-  // 有模态框打开时不响应,避免在对话框上按空格把歌给播了
+  // 有模态框打开时不响应，避免在对话框上按空格误触发播放
   if (document.querySelector('dialog[open]')) return;
 
   if (e.code === 'Space' || e.key === ' ') {

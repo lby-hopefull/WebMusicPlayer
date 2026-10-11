@@ -48,7 +48,7 @@ function dbDelete(storeName, key) {
   });
 }
 
-// 整表替换:清空 + 批量写入放在同一个事务里,要么全成功要么全回滚
+// 整表替换：清空 + 批量写入放在同一个事务里，要么全成功要么全回滚
 // entries: [{id, data}, ...]
 function dbReplaceAll(storeName, entries) {
   return new Promise(resolve => {
@@ -58,15 +58,15 @@ function dbReplaceAll(storeName, entries) {
     store.clear();
     (entries || []).forEach(entry => store.put(entry));
     tx.oncomplete = () => resolve(true);
-    tx.onerror = () => { console.warn('dbReplaceAll 失败:', storeName, tx.error); resolve(false); };
-    tx.onabort = () => { console.warn('dbReplaceAll 中止:', storeName, tx.error); resolve(false); };
+    tx.onerror = () => { console.warn('dbReplaceAll 失败：', storeName, tx.error); resolve(false); };
+    tx.onabort = () => { console.warn('dbReplaceAll 中止：', storeName, tx.error); resolve(false); };
   });
 }
 
 function initDB(){
   return new Promise(res=>{
-    // v5: 新增 songMeta 存储(歌曲的添加时间/大小/时长)。升版本只多建一个 store,
-    // 已有的 musicCache / 歌单等数据都原样保留。
+    // v5：新增 songMeta 存储（歌曲的添加时间、大小、时长）。
+    // 升级只多建一个 store，已有的 musicCache 与歌单数据原样保留。
     const req=indexedDB.open(dbName, 5);
     req.onupgradeneeded=e=>{ 
       const database = e.target.result;

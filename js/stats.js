@@ -25,7 +25,7 @@ async function renderStats(){
   }
   sortedStats.forEach(([song, count]) => {
     const div = document.createElement('div');
-    // 歌名一律走 textContent:文件名里的 <img onerror=...> 之类只会显示成普通文字
+    // 歌名一律通过 textContent 输出：文件名中的 <img onerror=...> 之类只会显示为普通文字
     const nameSpan = document.createElement('span');
     nameSpan.textContent = song;
     const countSpan = document.createElement('span');

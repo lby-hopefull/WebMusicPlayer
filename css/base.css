@@ -107,7 +107,7 @@ button:disabled {
 }
 
 /* ========== 通用对话框（替代 alert / confirm） ========== */
-/* 原生 alert/confirm 会阻塞渲染线程;改用 <dialog> + showModal,不阻塞且可样式化 */
+/* 原生 alert/confirm 会阻塞渲染线程；改用 <dialog> + showModal，既不阻塞线程，样式也可自定义 */
 #appDialog {
   padding: 22px 24px;
   border: none;
@@ -124,7 +124,7 @@ button:disabled {
   margin: 0 0 18px;
   font-size: 15px;
   line-height: 1.6;
-  word-break: break-all;      /* 超长歌名不会把对话框撑破 */
+  word-break: break-all;      /* 超长歌名在任意位置断行，避免对话框被撑宽 */
   white-space: pre-wrap;
 }
 #appDialog .dialog-actions {
@@ -138,7 +138,7 @@ button:disabled {
   font-size: 14px;
 }
 #appDialog .dialog-btn[hidden] {
-  display: none;             /* 只读提示框里藏掉"取消" */
+  display: none;             /* 仅提示、无需选择时隐藏「取消」按钮 */
 }
 #appDialog .dialog-btn-cancel {
   background: #9e9e9e;

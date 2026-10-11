@@ -16,18 +16,16 @@ function showPage(pageName) {
 
 // ========== 歌词延迟控制 ==========
 async function adjustLyricDelay(delta) {
-    // 界面上的数值 += 步长
+    // 显示值按步长累加，并消除浮点累积误差
     lyricDelay += delta;
     lyricDelay = Math.round(lyricDelay * 100) / 100;
     
-    // 计算需要存入数据库的数值（显示值 - 0.5）
     const actualDelayToSave = lyricDelay;
     
     document.getElementById('lyricDelayValue').textContent = lyricDelay.toFixed(2) + 's';
     
-    // 保存时：存入 (显示值 - 0.5)
     await dbPut('setting', 'lyricDelay', actualDelayToSave);
-    // 延迟变了当帧就该重算(rAF 只在播放时跑,暂停时手动刷一次)
+    // 延迟变化后当帧即需重算；rAF 只在播放时运行，暂停状态下手动刷新一次
     updateLyricHighlight();
 }
 
@@ -40,13 +38,13 @@ async function loadLyricDelay() {
 }
 
 // ========== 真随机数（Crypto API） ==========
-// 优先用浏览器自带的密码学安全随机源;并做拒绝采样消除取模偏差,
-// 保证每个下标被选中的概率完全相等(原来的 sin 取模既非真随机也有偏差)
+// 优先使用浏览器提供的密码学安全随机源，并通过拒绝采样消除取模偏差，
+// 使每个下标被选中的概率严格相等（旧的 sin 取模写法既非真随机，也存在偏差）
 function trueRandom(max) {
   if (!(max > 0)) return 0;
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     const buf = new Uint32Array(1);
-    const limit = Math.floor(4294967296 / max) * max; // 落在 [limit, 2^32) 的值会引入偏差,丢弃重抽
+    const limit = Math.floor(4294967296 / max) * max; // 落在 [limit, 2^32) 的值会引入偏差，丢弃重抽
     let v;
     do {
       crypto.getRandomValues(buf);
@@ -54,23 +52,23 @@ function trueRandom(max) {
     } while (v >= limit);
     return v % max;
   }
-  return Math.floor(Math.random() * max); // 极老环境降级
+  return Math.floor(Math.random() * max); // 浏览器不支持 crypto 时的降级路径
 }
 
 // ========== 歌曲名排序 ==========
-// 自然序:numeric:true 让 "第2首" 排在 "第10首" 前面;zh-CN 让中文按拼音排
+// 自然序：numeric:true 使「第2首」排在「第10首」之前；zh-CN 使中文按拼音排序
 function compareSongNames(a, b) {
   return String(a).localeCompare(String(b), 'zh-CN', { numeric: true, sensitivity: 'base' });
 }
 
-// 就地排序:保持数组引用不变,这样 tracks / lists['全部歌曲'] 这些别名指向同一份数据
+// 就地排序：保持数组引用不变，这样 tracks / lists['全部歌曲'] 这些别名指向同一份数据
 function sortSongsInPlace(list) {
   if (Array.isArray(list)) list.sort(compareSongNames);
   return list;
 }
 
-// ========== 歌曲排序:名称 / 时长 / 添加时间 / 文件大小 ==========
-// 歌曲列表页与管理页各有一份排序状态,默认"名称 升序"(即改动前的显示顺序)
+// ========== 歌曲排序：名称 / 时长 / 添加时间 / 文件大小 ==========
+// 歌曲列表页与管理页各有一份排序状态，默认为「名称 升序」，即本次改造前的显示顺序
 let listSortKey = 'name', listSortDir = 'asc';
 let manageSortKey = 'name', manageSortDir = 'asc';
 
@@ -82,8 +80,8 @@ function songMetaValue(name, key){
   return (typeof v === 'number' && isFinite(v)) ? v : null;
 }
 
-// 缺元信息的歌(没缓存过、也没播放过)永远排在最后,升序降序都一样 ——
-// 否则降序时"未知"会跑到最前面,看着像排序坏了。
+// 缺少元信息的歌曲（既未缓存也未播放过）恒定排在末尾，升序降序均如此；
+// 否则降序排列时未知项会排到最前，与直觉不符。
 function compareSongsBy(a, b, key, dir){
   const desc = dir === 'desc';
   if(key === 'name'){
@@ -96,18 +94,18 @@ function compareSongsBy(a, b, key, dir){
     return va === null ? 1 : -1;
   }
   let c = va - vb;
-  if(c === 0) c = compareSongNames(a, b);   // 同值时按名称,顺序稳定可预期
+  if(c === 0) c = compareSongNames(a, b);   // 同值时按名称，顺序稳定可预期
   return desc ? -c : c;
 }
 
-// 生成排好序的副本。不动原数组:歌单里的顺序是用户数据,排序只影响显示。
+// 生成排好序的副本。不动原数组：歌单里的顺序是用户数据，排序只影响显示。
 function sortSongsForView(list, key, dir){
   return [...(list || [])].sort((a, b) => compareSongsBy(a, b, key, dir));
 }
 
 // ========== 通用对话框（替代 alert / confirm） ==========
-// 原生 alert/confirm 会阻塞渲染线程;这里统一用 <dialog>,
-// 文案一律走 textContent —— 歌名/歌单名不会被当成 HTML 执行
+// 原生 alert/confirm 会阻塞渲染线程，这里统一改用 <dialog>；
+// 文案一律通过 textContent 输出 —— 歌名与歌单名不会被当作 HTML 解析执行
 let appDialog = null;
 let dialogResolve = null;
 
@@ -135,7 +133,7 @@ function ensureDialog() {
 
   okBtn.addEventListener('click', () => settleDialog(true));
   cancelBtn.addEventListener('click', () => settleDialog(false));
-  // ESC 关闭也当作"取消",否则 Promise 会永远挂起
+  // 按 ESC 关闭等同于「取消」，否则 Promise 会一直挂起
   el.addEventListener('cancel', e => { e.preventDefault(); settleDialog(false); });
   // 极端情况下被外部关闭时兜底
   el.addEventListener('close', () => {
@@ -153,7 +151,7 @@ function ensureDialog() {
 function settleDialog(result) {
   if (!appDialog || !dialogResolve) return;
   const resolve = dialogResolve;
-  dialogResolve = null;   // 先清空,close 事件就不会重复结算
+  dialogResolve = null;   // 先清空，close 事件就不会重复结算
   appDialog.el.close();
   resolve(result);
 }
@@ -170,12 +168,12 @@ function openDialog(message, options) {
   return new Promise(resolve => { dialogResolve = resolve; });
 }
 
-// 只有一个"确定"按钮的提示框
+// 只有一个「确定」按钮的提示框
 function uiAlert(message, options) {
   return openDialog(message, options).then(() => undefined);
 }
 
-// 带"取消/确定"的确认框,resolve(true) 表示确认
+// 带「取消 / 确定」的确认框，resolve(true) 表示确认
 function uiConfirm(message, options) {
   return openDialog(message, Object.assign({ confirm: true }, options || {}));
 }

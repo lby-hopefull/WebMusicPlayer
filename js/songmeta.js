@@ -1,18 +1,18 @@
-// ========== 歌曲元信息(idb: songMeta) ==========
-// 每首歌存三项: addedTime(加入时间) / size(文件大小,字节) / duration(时长,秒)。
-//   - 写入时机:缓存歌曲、批量下载、导入本地文件夹
-//   - 补齐时机:播放时读出音频 metadata(未缓存的在线歌曲也能拿到时长)
-//   - 删除时机:删除单曲缓存 / 批量删除歌曲时同步删除
-//   - 老数据(本次改动前就缓存好的)由 backfillSongMeta() 一次性回填
-// 记录在 idb 里是 {id: 歌名, data: {...}} —— 和 db.js 里其它 store 保持一致。
+// ========== 歌曲元信息（IndexedDB: songMeta） ==========
+// 每首歌记录三项：addedTime（加入时间）、size（文件大小，字节）、duration（时长，秒）。
+//   - 写入时机：缓存歌曲、批量下载、导入本地文件夹
+//   - 补齐时机：播放时读出音频 metadata（未缓存的在线歌曲也能取得时长）
+//   - 删除时机：删除单曲缓存或批量删除歌曲时同步删除
+//   - 历史数据（本次改造前已缓存的歌曲）由 backfillSongMeta() 一次性回填
+// 库中记录形如 {id: 歌名, data: {...}}，与 db.js 中其它 store 保持一致。
 
 async function getSongMeta(name){
   const rec = await dbGet('songMeta', name);
   return rec && rec.data ? rec.data : null;
 }
 
-// 合并写入:只覆盖 patch 给出的字段,其余保持原值。
-// 添加时间只在第一次记录时确定,之后再写不会被后来的调用改掉。
+// 合并写入：只覆盖 patch 给出的字段，其余保持原值。
+// 添加时间只在第一次记录时确定，之后再写不会被后来的调用改掉。
 async function mergeSongMeta(name, patch){
   const cur = (await getSongMeta(name)) || {};
   const next = Object.assign({}, cur, patch);
@@ -28,7 +28,7 @@ async function deleteSongMeta(name){
   return ok;
 }
 
-// 把整张 songMeta 表读进内存(排序时要用;表里只有小对象,读一次很便宜)
+// 把整张 songMeta 表读进内存(排序时要用；表里只有小对象，读一次很便宜)
 async function loadSongMetaMap(){
   const all = await dbGetAll('songMeta');
   const m = {};
@@ -39,7 +39,7 @@ async function loadSongMetaMap(){
   return m;
 }
 
-// 已缓存歌曲名列表(getAllKeys 只取键,不读音频本体)
+// 已缓存歌曲名列表（getAllKeys 只取键，不读取音频本体）
 async function getAllCachedKeys(){
   if(!db) return [];
   return new Promise(resolve => {
@@ -49,8 +49,8 @@ async function getAllCachedKeys(){
   });
 }
 
-// 探测音频时长:建个临时 audio 读文件头的 metadata,读完立刻释放对象 URL。
-// 失败/超时一律 null —— 元信息补不齐不该影响播放、缓存这些主流程。
+// 探测音频时长：创建临时 audio 元素读取文件头的 metadata，读取完毕立即释放对象 URL。
+// 失败或超时一律返回 null —— 元信息补齐与否不应影响播放、缓存等主流程。
 function probeAudioDuration(source){
   return new Promise(resolve => {
     let url;
@@ -68,13 +68,13 @@ function probeAudioDuration(source){
     el.onloadedmetadata = () => finish(isFinite(el.duration) && el.duration > 0 ? el.duration : null);
     el.onerror = () => finish(null);
     el.src = url;
-    setTimeout(() => finish(null), 15000);   // 兜底:别让探测把调用方挂死
+    setTimeout(() => finish(null), 15000);   // 兜底超时，避免探测过程阻塞调用方
   });
 }
 
-// 记录元信息。opts: {addedTime, size, duration, blob}
-//   blob 只有第一次需要(用来探测时长),已经有时长就不会再探测。
-// 全程吞异常:元信息是附加信息,失败不能拖累调用方。
+// 记录元信息。opts 取值：{addedTime, size, duration, blob}
+//   blob 仅在首次记录时需要（用于探测时长），已有时长则不再探测。
+// 全程忽略异常：元信息属于附加信息，失败不应影响调用方。
 async function recordSongMeta(name, opts){
   if(!db || !name) return null;
   const o = opts || {};
@@ -93,13 +93,13 @@ async function recordSongMeta(name, opts){
     }
     return songMetaMap[name] || null;
   } catch(e){
-    console.warn('记录歌曲元信息失败:', name, e && e.message);
+    console.warn('记录歌曲元信息失败：', name, e && e.message);
     return null;
   }
 }
 
-// 老数据回填:改动之前缓存的歌没有元信息,这里补一次(大小 + 时长 + 添加时间)。
-// 只跑一次(setting 里留标记),在后台执行,不挡启动;中途出错就下次启动接着来。
+// 历史数据回填：改造之前缓存的歌曲缺少元信息，此处补齐大小、时长与添加时间。
+// 仅在 setting 中留下标记后执行一次，后台运行不阻塞启动；中途出错则下次启动时继续。
 async function backfillSongMeta(){
   if(!db) return;
   const done = await dbGet('setting', 'songMetaBackfillDone');
@@ -119,7 +119,8 @@ async function backfillSongMeta(){
       if(!buf) continue;
 
       const patch = {};
-      // 老数据的真实"加入时间"已经无从考证,用回填时刻顶替(同批数据时间相同,排序时按名称兜底)
+      // 历史数据的真实「加入时间」已无法追溯，以回填时刻替代
+      // （同一批数据时间相同，排序时再由名称兜底）
       if(needTime) patch.addedTime = Date.now();
       if(needSize) patch.size = (buf.byteLength != null ? buf.byteLength : buf.size);
       if(needDur){
@@ -128,7 +129,7 @@ async function backfillSongMeta(){
       }
       if(Object.keys(patch).length){ await mergeSongMeta(name, patch); filled++; }
     }catch(e){
-      console.warn('回填元信息失败:', name, e && e.message);
+      console.warn('回填元信息失败：', name, e && e.message);
     }
   }
   await dbPut('setting', 'songMetaBackfillDone', true);
@@ -159,7 +160,7 @@ function formatAddedTime(t){
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-// 一行简短元信息:时长 · 大小(管理界面再加上加入时间),没有的项自动省略
+// 一行简短元信息：时长 · 大小（管理界面另附加入时间），缺失的项自动省略
 function songMetaBrief(name, withAdded){
   const m = songMetaMap[name];
   if(!m) return '';

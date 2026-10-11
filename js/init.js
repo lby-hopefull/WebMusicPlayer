@@ -26,21 +26,21 @@
     if (response.ok) {
       const serverTracks = await response.json();
       const savedTracks = await dbGet('playlist', 'all');
-      // 启动即按名称排序(自然序),和写入时保持同一份顺序
+      // 启动时即按名称自然序排序，与写入时保持同一份顺序
       tracks = sortSongsInPlace([...new Set([...(savedTracks?.data || []), ...serverTracks])]);
       await dbPut('playlist', 'all', tracks);
     } else {
       throw new Error('服务器响应错误');
     }
   } catch (error) {
-    console.error('获取服务器列表失败:', error);
+    console.error('获取服务器列表失败：', error);
     const saved = await dbGet('playlist', 'all');
     if (saved) tracks = saved.data || [];
     else tracks = [];
   }
 
-  // 启动即归一化:无论走服务器列表还是本地缓存,都让 tracks / 全部歌曲 / playlist.all
-  // 保持同一份"按名称排序"的结果(排序在同一份数组引用上就地完成)
+  // 启动即归一化：无论走服务器列表还是本地缓存，都让 tracks / 全部歌曲 / playlist.all
+  // 保持同一份「按名称排序」的结果（排序在同一份数组引用上就地完成）
   const lists = await loadLists();
   lists['全部歌曲'] = sortSongsInPlace(tracks);
   await dbPut('playlist', 'all', tracks);
@@ -89,10 +89,10 @@
   renderStats();
   renderManageList();
 
-  // 老数据回填:改动前就缓存好的歌没有元信息记录,后台补一次(不挡启动)
-  setTimeout(() => { backfillSongMeta().catch(e => console.warn('元信息回填失败:', e)); }, 1500);
+  // 历史数据回填：此前已缓存的歌曲缺少元信息记录，延后在后台补一次，不阻塞启动
+  setTimeout(() => { backfillSongMeta().catch(e => console.warn('元信息回填失败：', e)); }, 1500);
 })();
-// 在初始化代码块末尾添加
+
 window.addEventListener('beforeunload', async () => {
   await saveCurrentProgress();
 });

@@ -10,9 +10,8 @@
 <link rel="stylesheet" href="css/stats.css">
 <link rel="stylesheet" href="css/manage.css">
 
-<!-- defer:并行下载、按顺序执行、且保证在 DOM 解析完成之后才跑。
-     以前靠 <script> 的人肉排位来保证依赖顺序,bindings/init 谁在前谁在后全靠自觉;
-     加了 defer 之后,顺序由这里声明,init.js 也不用手动等 DOMContentLoaded。 -->
+<!-- 全部脚本加 defer：并行下载、按此处的声明顺序执行，且都等到 DOM 解析完成之后才运行。
+     依赖顺序由这里显式声明，init.js 也不必再自行等待 DOMContentLoaded。 -->
 <script defer src="js/jsmediatags.min.js"></script>
 <script defer src="js/app.js"></script>
 <script defer src="js/db.js"></script>
@@ -55,7 +54,7 @@
       <!-- 调整布局：播放模式左 + 控制按钮 + 音量右 -->
       <div class="controls-row">
         <div class="play-mode-section">
-          <label for="playMode">播放模式:</label>
+          <label for="playMode">播放模式：</label>
           <select id="playMode" aria-label="播放模式">
             <option value="sequential">顺序</option>
             <option value="loop">单曲循环</option>
@@ -66,7 +65,7 @@
         <button id="playPauseBtn" type="button" aria-label="播放">▶</button>
         <button id="nextBtn" type="button" aria-label="下一首">⏭</button>
         <div class="volume-section">
-          <label for="volumeSlider">音量:</label>
+          <label for="volumeSlider">音量：</label>
           <input type="range" id="volumeSlider" value="100" min="0" max="100" aria-label="音量">
           <span id="volumeValue">100</span>
         </div>
@@ -86,7 +85,7 @@
   <!-- 歌词界面 -->
   <div id="lyricsContainer">
     <div id="lyricDelayControl">
-      <span>歌词延迟:</span>
+      <span>歌词延迟：</span>
       <button id="lyricDelayMinus" type="button" aria-label="歌词延迟减少 0.05 秒">-</button>
       <span id="lyricDelayValue">0.00s</span>
       <button id="lyricDelayPlus" type="button" aria-label="歌词延迟增加 0.05 秒">+</button>
@@ -97,9 +96,9 @@
 
 <!-- 歌曲列表页面 -->
 <section id="page-lists">
-  <h3>自建列表</h3>
+  <h3>自建歌单</h3>
   <div class="sort-bar">
-    <label for="listSortKey">排序:</label>
+    <label for="listSortKey">排序：</label>
     <select id="listSortKey" aria-label="歌曲列表排序方式">
       <option value="name">名称</option>
       <option value="duration">歌曲时长</option>
@@ -112,7 +111,7 @@
     </select>
   </div>
   <div style="display:flex; gap:10px; margin-bottom:15px;">
-    <input id="newListName" placeholder="新列表名" aria-label="新列表名称" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
+    <input id="newListName" placeholder="新歌单名" aria-label="新歌单名称" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
     <button id="createListBtn" type="button">创建</button>
   </div>
   <div id="customLists"></div>
@@ -139,11 +138,11 @@
     <button id="clearCacheBtn" type="button" style="background:#ff9800;">清除缓存</button>
   </div>
   <div class="manage-info">
-    <span id="selectedCount">已选择: 0</span>
-    <span style="margin-left:20px;" id="cachedCount">已缓存: 0</span>
+    <span id="selectedCount">已选择： 0</span>
+    <span style="margin-left:20px;" id="cachedCount">已缓存： 0</span>
   </div>
   <div class="sort-bar">
-    <label for="manageSortKey">排序:</label>
+    <label for="manageSortKey">排序：</label>
     <select id="manageSortKey" aria-label="管理列表排序方式">
       <option value="name">名称</option>
       <option value="duration">歌曲时长</option>
@@ -156,7 +155,7 @@
     </select>
   </div>
   <div class="progress-container" id="progressContainer">
-    <div id="progressText">进度: 0/0</div>
+    <div id="progressText">进度： 0/0</div>
     <div class="progress-bar-container">
       <div class="progress-bar-fill" id="progressBarFill"></div>
     </div>
