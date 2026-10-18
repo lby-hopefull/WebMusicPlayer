@@ -156,8 +156,11 @@ input[type="range"]::-webkit-slider-thumb {
   height: 10px;
   border-radius: 50%;
   background: var(--color-bg-primary);
-  /* 关键：向左 100vw 的实心阴影 = 已播放段，位置由滑块决定 */
-  box-shadow: -100vw 0 0 100vw var(--color-primary);
+  /* 关键：向左铺出的实心阴影 = 已播放段，位置由滑块决定，因此永远等于当前 value。
+     水平偏移比铺开半径再多半个滑块宽（-100vw - 5px），使填充的右边界停在滑块
+     *中心线* 而不是右缘：滑块是圆形，上下两端很窄，若边界落在右缘，圆角外侧就会
+     漏出蓝色（看起来像圆角被方角填满）。落到中心线后每一行的蓝色都被滑块盖住。 */
+  box-shadow: calc(-100vw - 5px) 0 0 100vw var(--color-primary);
 }
 
 /* Firefox：轨道 + 原生进度填充 */
