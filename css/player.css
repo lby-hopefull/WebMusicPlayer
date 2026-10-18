@@ -421,6 +421,21 @@ input[type="range"]::-moz-range-thumb {
   /* 隐藏滚动条但保留滚动能力 */
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* 使用 mask-image 实现渐变蒙版效果 */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black clamp(60px, 12vh, 120px),
+    black calc(100% - clamp(60px, 12vh, 120px)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black clamp(60px, 12vh, 120px),
+    black calc(100% - clamp(60px, 12vh, 120px)),
+    transparent 100%
+  );
 }
 
 #lyricsContainer::-webkit-scrollbar {

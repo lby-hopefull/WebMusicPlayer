@@ -72,7 +72,7 @@
   }
 
   #page-player.lyrics-on #lyricsContainer {
-    position: static;
+    position: relative;
     inset: auto;
     z-index: auto;
     flex: 1 1 auto;
@@ -82,6 +82,21 @@
     background: transparent;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+    /* 横屏模式蒙版高度更小 */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      black clamp(40px, 10vh, 80px),
+      black calc(100% - clamp(40px, 10vh, 80px)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      black clamp(40px, 10vh, 80px),
+      black calc(100% - clamp(40px, 10vh, 80px)),
+      transparent 100%
+    );
   }
 }
 
