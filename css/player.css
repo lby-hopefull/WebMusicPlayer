@@ -12,6 +12,8 @@
   display: flex;
   flex-direction: column;
   padding: var(--spacing-xl);
+  /* 底部留出空白，防止内容被导航栏遮挡 */
+  padding-bottom: calc(var(--navbar-height) + var(--spacing-2xl));
 }
 
 /* 播放器主容器：竖屏「封面在上、播放面板在下」；
@@ -28,7 +30,8 @@
   /* 宽屏上限：与其它页面同样居中，但放宽一档以容纳封面 + 播放面板两栏 */
   max-width: var(--page-max-width-wide);
   margin: 0 auto;
-  padding-bottom: var(--spacing-xl);
+  /* 底部额外留出导航栏高度，防止被胶囊遮挡 */
+  padding-bottom: calc(var(--navbar-height) + var(--spacing-xl));
 }
 
 /* 封面容器：竖屏随视口宽度流式缩放，横屏由 responsive.css 改以视口高度为准 */

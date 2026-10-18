@@ -47,12 +47,17 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 /* 5. 优化背景模糊效果 */
 #lyricsContainer,
-#coverLyricToggle,
-.navbar {
+#coverLyricToggle {
   /* 强制使用 GPU 渲染毛玻璃 */
   transform: translateZ(0);
   /* 降低模糊半径以减少 GPU 负载 */
   /* backdrop-filter 参数已在各自的 CSS 中定义 */
+}
+
+/* 导航栏需要同时保持居中和 GPU 加速 */
+.navbar {
+  /* 同时使用 translateX(-50%) 居中和 translateZ(0) GPU 加速 */
+  transform: translateX(-50%) translateZ(0);
 }
 
 /* 6. 优化过渡动画 - 仅对 transform 和 opacity 使用过渡 */
