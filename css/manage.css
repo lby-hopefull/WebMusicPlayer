@@ -19,29 +19,17 @@
   white-space: nowrap;
 }
 
-/* 功能按钮类 */
+/* 功能按钮类：背景与其他按钮同为半透明底，仅以前景色区分语义 */
 .btn-danger {
-  background: var(--color-danger);
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: var(--color-danger-dark);
+  color: var(--color-danger);
 }
 
 .btn-warning {
-  background: var(--color-warning);
-}
-
-.btn-warning:hover:not(:disabled) {
-  background: var(--color-warning-dark);
+  color: var(--color-warning);
 }
 
 .btn-success {
-  background: var(--color-success);
-}
-
-.btn-success:hover:not(:disabled) {
-  background: var(--color-success-dark);
+  color: var(--color-success);
 }
 
 /* 已选择 / 已缓存 状态条 */
@@ -53,7 +41,7 @@
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md);
-  background: var(--color-bg-secondary);
+  background: var(--surface-1);
   border-radius: var(--radius-sm);
 }
 
@@ -63,7 +51,7 @@
    而且内层滚到底之后整页还在继续滚，非常难受。
    这里只用分隔线表达「同属一个列表」。 */
 #manageSongList {
-  border-top: 1px solid var(--color-border-light);
+  border-top: 1px solid var(--surface-border);
 }
 
 .manage-song-item {
@@ -71,7 +59,7 @@
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md) var(--spacing-xs);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--surface-border);
   transition: background var(--transition-base);
 }
 
@@ -80,20 +68,10 @@
 }
 
 .manage-song-item:hover {
-  background: var(--color-bg-secondary);
+  background: var(--surface-3);
 }
 
-.manage-song-item input[type="checkbox"] {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-}
-
-.manage-song-item input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--color-primary);
-}
+/* 勾选框外观由 base.css 的通用规则统一提供，此处不再覆盖 */
 
 /* 勾选框 · 缓存状态 · 歌名：横向一行，歌名负责占满剩余空间 */
 .manage-song-name {
@@ -132,21 +110,24 @@
   }
 }
 
+/* 缓存状态标签：与全站一致使用半透明底，
+   原背景色（成功绿）转为前景色；「未缓存」原本就是中性灰，前景改用次级文字色 */
 .cache-status {
   flex: none;
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-full);
+  /* 与其它行内标签同一级：比卡片更强一档，避免看起来像纯文字 */
+  background: var(--surface-3);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
 }
 
 .cache-status.cached {
-  background: var(--color-success);
-  color: white;
+  color: var(--color-success);
 }
 
 .cache-status.uncached {
-  background: var(--color-text-disabled);
   color: var(--color-text-secondary);
 }
 
@@ -157,11 +138,7 @@
   gap: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: var(--font-size-xs);
-  background: var(--color-danger);
-}
-
-.manage-song-item button:hover:not(:disabled) {
-  background: var(--color-danger-dark);
+  color: var(--color-danger);
 }
 
 /* ========== 导入 / 下载进度 ========== */
@@ -169,7 +146,7 @@
 .progress-container {
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-lg);
-  background: var(--color-bg-secondary);
+  background: var(--surface-1);
   border-radius: var(--radius-md);
   display: none;
 }
@@ -191,9 +168,10 @@
 }
 
 /* ========== 选择歌曲对话框 ========== */
+/* 与通用确认框同属浮层：最高一级半透明底 + 毛玻璃 */
 #songDialog {
   padding: var(--spacing-lg);
-  border: none;
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   max-width: 90vw;
@@ -201,11 +179,15 @@
   overflow-y: auto;
   margin: auto;
   color: var(--color-text-primary);
-  background: var(--color-bg-primary);
+  background: var(--surface-4);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
 }
 
+/* 遮罩不做压暗：面板本身是浮层材质，足以与页面区分，
+   压暗反而让整屏变黑、影响辨认歌单内容 */
 #songDialog::backdrop {
-  background: var(--color-overlay);
+  background: transparent;
 }
 
 #dialogSongList {
@@ -219,11 +201,13 @@
   padding: var(--spacing-sm);
   cursor: pointer;
   border-radius: var(--radius-sm);
+  /* 歌曲选择对话框中的逐行选项与其他列表行使用同一级半透明底 */
+  background: var(--surface-1);
   transition: background var(--transition-base);
 }
 
 #dialogSongList label:hover {
-  background: var(--color-bg-secondary);
+  background: var(--surface-3);
 }
 
 #dialogSongList label:focus-visible {

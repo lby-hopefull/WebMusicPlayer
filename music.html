@@ -25,21 +25,32 @@
 <!-- 全部脚本加 defer：并行下载、按此处的声明顺序执行，且都等到 DOM 解析完成之后才运行。
      依赖顺序由这里显式声明，init.js 也不必再自行等待 DOMContentLoaded。 -->
 <script defer src="js/jsmediatags.min.js"></script>
+<script defer src="js/color-thief.min.js"></script>
 <script defer src="js/app.js"></script>
 <script defer src="js/db.js"></script>
 <script defer src="js/songmeta.js"></script>
 <script defer src="js/ui.js"></script>
 <script defer src="js/stats.js"></script>
 <script defer src="js/lyrics.js"></script>
+<script defer src="js/ambience.js"></script>
 <script defer src="js/player.js"></script>
 <script defer src="js/media-session.js"></script>
 <script defer src="js/lists.js"></script>
 <script defer src="js/manage.js"></script>
 <script defer src="js/theme.js"></script>
+<script defer src="js/select.js"></script>
 <script defer src="js/bindings.js"></script>
 <script defer src="js/init.js"></script>
 </head>
 <body>
+
+<!-- 背景动态色斑：关键色由 js/ambience.js 从封面提取后写入 CSS 变量。
+     无封面时带 is-empty，背景保持主题底色。 -->
+<div id="ambient" class="is-empty" aria-hidden="true">
+  <span class="blob"></span>
+  <span class="blob"></span>
+  <span class="blob"></span>
+</div>
 
 <!-- ICONS:START -->
 <!-- Bootstrap Icons v1.13.1 · 按需裁剪 · MIT (c) The Bootstrap Authors
@@ -95,8 +106,9 @@
         </span>
       </div>
 
-      <!-- 播放面板：竖屏排在封面下方；横屏（宽度较大）排在封面右侧。
-           面板内部顺序固定为「上：标题·歌手·总时长·进度条，下：播放控制·播放模式·音量」 -->
+      <!-- 播放面板：竖屏排在封面下方，横屏排在封面右侧。
+           内部顺序为「上：标题·歌手·总时长·进度条，下：播放控制·播放模式·音量」；
+           歌词视图开启后，横屏下由歌词替换掉这两块，竖屏下则整屏覆盖。 -->
       <div class="player-panel">
         <div id="progressSection">
           <div id="trackInfo">
@@ -140,6 +152,11 @@
             <span id="volumeValue">100</span>
           </div>
         </div>
+
+        <!-- 歌词视图：竖屏时以整屏浮层呈现（CSS 定位为 fixed）；
+             横屏时留在面板内部，隐藏控制区并只占据右侧面板。
+             歌词延迟的调整入口已迁至设置页（见「歌词」分组）。 -->
+        <div id="lyricsContainer"></div>
       </div>
     </div>
 
@@ -156,19 +173,6 @@
     </div>
   </div>
 
-  <!-- 歌词界面 -->
-  <div id="lyricsContainer">
-    <div id="lyricDelayControl">
-      <span>歌词延迟：</span>
-      <button id="lyricDelayMinus" type="button" aria-label="歌词延迟减少 0.05 秒">
-        <svg class="icon" aria-hidden="true"><use href="#dash-lg"/></svg>
-      </button>
-      <span id="lyricDelayValue">0.00s</span>
-      <button id="lyricDelayPlus" type="button" aria-label="歌词延迟增加 0.05 秒">
-        <svg class="icon" aria-hidden="true"><use href="#plus-lg"/></svg>
-      </button>
-    </div>
-  </div>
   <button id="coverLyricToggle" type="button" aria-label="切换到歌词界面">
     <svg class="icon" aria-hidden="true"><use href="#file-earmark-text"/></svg>
     <span id="coverLyricToggleLabel">显示歌词</span>
@@ -177,7 +181,6 @@
 
 <!-- 歌曲列表页面 -->
 <section id="page-lists">
-  <h3>自建歌单</h3>
   <div class="sort-bar">
     <label for="listSortKey">排序：</label>
     <select id="listSortKey" aria-label="歌曲列表排序方式">
@@ -200,7 +203,6 @@
 
 <!-- 统计页面 -->
 <section id="page-stats">
-  <h3>播放统计</h3>
   <div id="stats"></div>
 </section>
 
@@ -233,6 +235,34 @@
               <button type="button" class="theme-option active" data-theme="system" aria-label="跟随系统">
                 <svg class="icon theme-icon" aria-hidden="true"><use href="#display"/></svg>
                 <span class="theme-name">自动</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- 歌词 -->
+    <details class="settings-section">
+      <summary class="settings-section-title">
+        <svg class="icon section-icon" aria-hidden="true"><use href="#file-earmark-text"/></svg>
+        <span>歌词</span>
+        <svg class="icon section-chevron" aria-hidden="true"><use href="#chevron-right"/></svg>
+      </summary>
+      <div class="settings-section-content">
+        <div class="settings-row">
+          <div class="settings-label-group">
+            <span class="settings-label">歌词延迟</span>
+            <span class="settings-hint">歌词与音频不同步时以 0.05 秒为步长微调，正值表示歌词延后</span>
+          </div>
+          <div class="settings-control">
+            <div class="stepper">
+              <button id="lyricDelayMinus" type="button" aria-label="歌词延迟减少 0.05 秒">
+                <svg class="icon" aria-hidden="true"><use href="#dash-lg"/></svg>
+              </button>
+              <span id="lyricDelayValue">0.00s</span>
+              <button id="lyricDelayPlus" type="button" aria-label="歌词延迟增加 0.05 秒">
+                <svg class="icon" aria-hidden="true"><use href="#plus-lg"/></svg>
               </button>
             </div>
           </div>
@@ -329,7 +359,7 @@
 </dialog>
 
 <div class="navbar">
-  <button id="navPlayer" type="button">
+  <button id="navPlayer" type="button" class="active">
     <svg class="icon" aria-hidden="true"><use href="#play-circle"/></svg>
     <span>播放器</span>
   </button>

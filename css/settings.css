@@ -1,9 +1,8 @@
 /* ========== 设置页面 ========== */
+/* 宽度上限通过左右内边距实现，页面本身保持满宽：
+   这样滚动条固定在视口最右侧，与播放器页一致 */
 #page-settings {
-  padding: var(--spacing-2xl);
-  /* 其余页面沿用同一条宽度上限（--page-max-width） */
-  max-width: var(--page-max-width);
-  margin: 0 auto;
+  padding: var(--spacing-2xl) max(var(--spacing-2xl), calc((100% - var(--page-max-width)) / 2)) var(--navbar-height);
   min-height: 100%;
 }
 
@@ -16,9 +15,9 @@
 
 /* 设置分组 - 使用原生 details/summary */
 .settings-section {
-  background: var(--color-bg-primary);
+  background: var(--surface-1);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--surface-border);
   overflow: hidden;
   transition: box-shadow var(--transition-base);
 }
@@ -37,7 +36,7 @@
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-lg) var(--spacing-xl);
-  background: var(--color-bg-secondary);
+  background: var(--surface-1);
   cursor: pointer;
   user-select: none;
   font-size: var(--font-size-lg);
@@ -64,7 +63,7 @@
 }
 
 .settings-section-title:hover {
-  background: var(--color-bg-tertiary);
+  background: var(--surface-3);
 }
 
 .section-icon {
@@ -84,7 +83,7 @@
   align-items: center;
   gap: var(--spacing-2xl);
   padding: var(--spacing-lg) 0;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--surface-border);
 }
 
 .settings-row:last-child {
@@ -116,11 +115,40 @@
   flex-shrink: 0;
 }
 
+/* 步进器：歌词延迟等“减 / 值 / 加”式控件 */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+}
+
+.stepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-base);
+}
+
+.stepper #lyricDelayValue {
+  min-width: 4ch;
+  text-align: center;
+  color: var(--color-primary);
+  font-size: var(--font-size-base);
+  font-variant-numeric: tabular-nums;
+}
+
 /* 主题选择器 */
 .theme-selector {
   display: flex;
   gap: var(--spacing-sm);
-  background: var(--color-bg-secondary);
+  background: var(--surface-1);
   padding: var(--spacing-xs);
   border-radius: var(--radius-md);
 }
@@ -141,19 +169,20 @@
 }
 
 .theme-option:hover {
-  background: var(--color-bg-tertiary);
+  background: var(--surface-2);
   transform: translateY(-2px);
 }
 
+/* 当前主题：容器用淡色胶囊、文字与图标用主色，与底部导航的高亮方式保持一致 */
 .theme-option.active {
-  background: var(--color-primary);
-  color: white;
+  background: var(--nav-item-active);
+  color: var(--color-primary);
   border-color: var(--color-primary);
-  box-shadow: 0 4px 12px rgba(91, 155, 213, 0.3);
+  box-shadow: none;
 }
 
 .theme-option.active:hover {
-  background: var(--color-primary-dark);
+  background: var(--nav-item-active);
   transform: translateY(-2px);
 }
 
@@ -178,7 +207,7 @@
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md);
-  background: var(--color-bg-secondary);
+  background: var(--surface-1);
   border-radius: var(--radius-sm);
 }
 

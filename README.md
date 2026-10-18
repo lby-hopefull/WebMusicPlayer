@@ -1,219 +1,195 @@
 <div align="center">
 
-# 🎵 ESP32 音乐播放器 (Standalone Web Player) / ESP32 Music Player
+# ESP32 音乐播放器（纯前端 Web 播放器）
 
-**[🇨🇳 中文](#-中文版本)** &nbsp;|&nbsp; **[🇺🇸 English](#-english-version)**
+面向局域网与嵌入式设备的纯前端音乐播放器，播放逻辑与界面均由浏览器端 JavaScript 驱动。
 
-*A front-end only Web Music Player designed for local networks and embedded devices.*
+[中文](#中文) &nbsp;|&nbsp; [English](#english)
 
 </div>
 
 ---
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<!--                      中文版本                                 -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+## 中文
 
-<h2 align="center">🇨🇳 中文版本</h2>
+### 简介
 
-<p align="center">
-  <a href="#-中文版本"><img src="https://img.shields.io/badge/🇨🇳%20中文-当前语言-blue?style=for-the-badge" alt="中文"></a>
-  <a href="#-english-version"><img src="https://img.shields.io/badge/🇺🇸%20English-Switch-lightgrey?style=for-the-badge" alt="Switch to English"></a>
-</p>
+纯前端实现的音乐播放器，最初面向局域网与 ESP32 等嵌入式设备，同样适用于个人站点部署。
+支持逐字歌词、系统媒体控制、IndexedDB 离线缓存与本地文件夹导入。
 
-### 📖 项目简介
+### 功能
 
-一个纯前端实现的 Web 音乐播放器，最初面向局域网与 ESP32 等嵌入式设备，同样适用于个人站点部署。播放逻辑与界面全部由浏览器端 JavaScript 驱动，支持逐字歌词高亮、系统媒体控制、IndexedDB 离线缓存与本地文件夹导入。
-
-### ✨ 核心特性
-
-- **离线优先与本地缓存**：歌曲数据写入浏览器 IndexedDB，断网后仍可正常播放。
-- **逐字歌词引擎**：支持逐字与逐词滚动高亮，可识别并关联译文行。
-- **系统级媒体控制**：基于 Media Session API，锁屏界面、通知栏与桌面控制中心均可播放、暂停、切歌与拖动进度。
-- **多端自适应**：响应式布局覆盖手机、平板与桌面端，并可通过文件系统接口直接导入本地文件夹。
-- **状态持久化**：播放进度、播放统计与队列顺序自动保存，刷新页面后继续。
-
-### 🛠️ 功能说明
-
-| 功能模块 | 详细说明 |
+| 模块 | 说明 |
 | :--- | :--- |
-| **播放控制** | 顺序、单曲循环、随机三种模式；支持音量调节与进度条拖动。 |
-| **键盘快捷键** | 空格键播放或暂停；← / → 快退或快进 5 秒（焦点位于输入框内时不生效）。 |
-| **歌词显示** | 点击「显示歌词」按钮切换歌词界面；支持歌词延迟微调；点击歌词行跳转至对应时间点。 |
-| **歌单管理** | 自建歌单，批量添加或移除歌曲；曲库与歌单按名称自然序排列，从歌单点歌按该歌单顺序播放。 |
-| **本地导入** | 选择本地文件夹后自动识别音频文件并加入曲库。 |
-| **统计分析** | 自动记录每首歌的播放次数，支持按热度排序查看。 |
-| **数据管理** | 支持清除缓存、删除单曲缓存，或将歌曲从所有列表中移除。 |
+| 播放控制 | 顺序、单曲循环、随机三种模式；支持音量调节与进度拖动 |
+| 键盘快捷键 | 空格键播放或暂停；左右方向键快退或快进 5 秒（表单控件获得焦点时不生效） |
+| 歌词 | 逐字与逐词高亮，支持译文；点击歌词行跳转；开启时自动定位当前行；延迟在设置页调整 |
+| 歌单管理 | 自建歌单与批量增删；可按名称、时长、添加时间、文件大小排序 |
+| 本地导入 | 选择本地文件夹后自动识别音频文件并加入曲库 |
+| 统计分析 | 记录每首歌曲的播放次数，支持按热度查看 |
+| 数据管理 | 清除全部缓存、删除单曲缓存，或将歌曲从所有列表中移除 |
+| 外观 | 浅色与深色主题；背景色斑取自当前封面主色 |
 
-### 📦 技术栈
+### 界面与布局
 
-- **核心语言**：HTML5、JavaScript (ES6+)
-- **前端库**：
-  - `jsmediatags`：读取音频文件的 ID3、MP4 等标签信息（封面、歌手、专辑）。
-  - `bootstrap-icons`（Bootstrap Icons）：所有界面图标的图形来源。上游 sprite 有 2000+ 图标，
-    本项目只保留用到的部分，内联在 `music.html` 的 sprite 块里。
-- **存储方案**：IndexedDB，直接调用浏览器原生接口。
-- **样式布局**：原生 CSS3，Flexbox 布局，不依赖第三方 UI 框架。
-- **进度条 / 音量条**：`<input type="range">` + 纯 CSS 绘制 —— 已播放段由滑块位置决定
-  （Chromium/Safari 用滑块的 `box-shadow` 铺开，Firefox 用 `::-moz-range-progress`），
-  未播放轨道用主题变量 `--color-track`，因此浅色、深色主题下都清晰可见，且无需任何 JS 同步。
-- **关键 API**：Media Session API（媒体控制）、File System Access API（本地文件夹读取）。
+- 播放页按视口方向切换形态：竖屏封面在上、控制区在下；横屏封面在左、控制区在右。
+- 横屏下开启歌词时，仅以歌词替换封面右侧的控制区，封面保持可见；竖屏下歌词为整屏视图。
+- 歌词视图隐藏滚动条，滚动能力保留。
+- 播放模式、播放按钮与音量在全部视口下保持单行排列，窄屏时相应收缩。
+- 底部导航为悬浮胶囊，模糊背景，不占用布局高度；当前项以淡色胶囊标记容器，
+  以主色标记文字与图标。
+- 卡片、列表行、对话框、滚动条与状态标签统一使用半透明底色：浅色主题为半透明黑，
+  深色主题为半透明白；原本带语义色的控件（按钮、缓存状态）以原背景色作前景色。
+- 各页面滚动条均固定在视口最右侧。
+- 封面、按钮与面板尺寸随视口流式缩放。
 
-### 🚀 快速开始
+### 可调参数
 
-项目由一组静态文件构成，无需构建步骤，部署方式如下。
+外观由 `css/variables.css` 中的设计令牌集中管理，修改一处即全站生效。
 
-#### 1. 直接运行
-- 直接双击 `music.html` 也能打开，界面与图标都会正常显示（图标 sprite 内联在页面里，
-  不依赖任何外部请求）。
-- *若需读取本地文件夹或使用缓存功能，必须通过本地服务器访问。*
-
-#### 2. 部署到静态服务器（推荐）
-将整个目录放置于 Nginx、Apache 或任意静态文件服务器的根目录下。
-
-#### 3. 与 ESP32 / ESP8266 配合使用
-- 将本项目的静态文件上传至 ESP32 的 SPIFFS 或 LittleFS 分区。
-- 启动 ESP32 的 Web Server 服务。
-- 连接 ESP32 的热点或所在局域网，通过浏览器访问其 IP 地址即可控制播放。
-
-### 🎛️ 后端接口说明
-
-前端通过 Fetch API 调用以下接口，获取文件列表与音频流数据。
-
-| 接口地址 | 方法 | 说明 | 预期返回/参数 |
+| 参数 | 默认值 | 位置 | 作用 |
 | :--- | :--- | :--- | :--- |
-| `/music_list` | GET | 获取服务端歌曲列表 | 返回文件名组成的 JSON 数组 |
-| `/music_play` | GET | 获取指定歌曲的音频流 | 参数 `file=文件名`，返回音频文件流 |
+| `--color-keep` | `0.85` | `css/variables.css`（半透明材质区块） | 背景色斑保留封面原色的比例，取值 0 至 1；越大越接近原色，越小越接近主题底色 |
+| `--surface-1-alpha` | `0.05` | 同上 | 列表行、卡片、滚动条轨道的底透明度 |
+| `--surface-2-alpha` | `0.08` | 同上 | 按钮、对话框、导航胶囊、歌词视图的底透明度 |
+| `--surface-3-alpha` | `0.12` | 同上 | 悬停与当前项容器的底透明度 |
+| `--page-max-width` | `1000px` | 同上（布局常量区块） | 列表、统计、设置页的内容宽度上限 |
 
-### 🤝 贡献指南
+浅色与深色主题的实际色值在 `css/responsive.css` 的主题区块中覆盖，
+半透明底分别取黑与白，混合基准 `--ambient-mix` 同理。
 
-欢迎通过 Issue 或 Pull Request 参与改进：
-1. Fork 仓库
-2. 创建特性分支（`git checkout -b feature/AmazingFeature`）
-3. 提交更改（`git commit -m 'Add some amazing feature'`）
-4. 推送到远程分支（`git push origin feature/AmazingFeature`）
-5. 发起 Pull Request
+### 技术栈
 
-### 依赖
+- 核心：HTML5、JavaScript（ES6+），无需构建步骤
+- 依赖库：
+  - jsmediatags：读取 ID3、MP4 等音频标签，提供封面、歌手与专辑
+  - ColorThief：从封面提取关键色，驱动背景色斑
+  - Bootstrap Icons：界面图标来源，sprite 内联于 `music.html`
+- 存储：IndexedDB，直接使用浏览器原生接口
+- 样式：原生 CSS3，Flexbox 布局，不依赖第三方 UI 框架
+- 关键 API：Media Session API、File System Access API
 
-- [jsmediatags](https://github.com/aadsm/jsmediatags)  
-  用于读取音频文件元数据。  
-  **许可证**：MIT  
-  **版权**：(c) 2008 Jacob Seidelin, (c) 2009 Opera Software ASA, (c) 2010 Joshua Kifer, (c) 2015 António Afonso
+### 快速开始
 
-### 📄 许可证
+项目由静态文件构成，无需构建。
 
-本项目基于 MIT 许可证开源，详见 [LICENSE.md](LICENSE.md)。
+1. 直接运行：双击 `music.html` 即可打开。读取本地文件夹与使用缓存功能需通过服务器访问。
+2. 静态服务器：将整个目录置于 Nginx、Apache 等任意静态服务器的根目录。
+3. 与 ESP32 配合：将文件上传至 SPIFFS 或 LittleFS，启动 Web Server 后经局域网访问。
 
-<p align="center">
-  <a href="#-中文版本"><img src="https://img.shields.io/badge/⬆%20返回顶部-中文-blue?style=flat-square" alt="返回顶部"></a>
-</p>
+### 后端接口
+
+| 接口 | 方法 | 说明 |
+| :--- | :--- | :--- |
+| `/music_list` | GET | 返回由歌曲文件名组成的 JSON 数组 |
+| `/music_play` | GET | 参数 `file`，返回对应音频流 |
+
+### 已知限制
+
+- 下拉选择框的控件外观由样式表自绘；展开后的选项面板由操作系统绘制，
+  样式表无法改写，仅能通过 `color-scheme` 使其配色跟随主题。
+
+### 依赖许可
+
+- [jsmediatags](https://github.com/aadsm/jsmediatags)：MIT
+- [ColorThief](https://github.com/lokesh/color-thief)：MIT
+- [Bootstrap Icons](https://github.com/twbs/icons)：MIT
+
+本项目基于 MIT 许可发布，详见 [LICENSE.md](LICENSE.md)，第三方声明见 [NOTICE.md](NOTICE.md)。
 
 ---
----
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<!--                    English Version                            -->
-<!-- ══════════════════════════════════════════════════════════════ -->
+## English
 
-<h2 align="center">🇺🇸 English Version</h2>
+### Overview
 
-<p align="center">
-  <a href="#-english-version"><img src="https://img.shields.io/badge/🇺🇸%20English-Current-blue?style=for-the-badge" alt="English"></a>
-  <a href="#-中文版本"><img src="https://img.shields.io/badge/🇨🇳%20中文-Switch-lightgrey?style=for-the-badge" alt="Switch to Chinese"></a>
-</p>
+A front-end only music player, originally built for local networks and embedded devices such as
+the ESP32, and equally suitable for personal sites. It provides word-by-word lyrics, system media
+controls, IndexedDB offline caching and local folder import.
 
-### 📖 Introduction
-
-A front-end only Web Music Player, originally built for local networks and embedded devices such as the ESP32, and equally suitable for personal websites. Playback logic and the user interface run entirely in browser-side JavaScript, with word-by-word lyric highlighting, system media controls, IndexedDB offline caching, and local folder import.
-
-### ✨ Core Features
-
-- **Offline-First & Local Caching**: Songs are written to the browser's IndexedDB, so playback continues without a network connection.
-- **Word-Level Lyrics Engine**: Supports word-by-word and phrase-by-phrase scrolling highlights, with translation lines recognized and attached to their source lines.
-- **System-Level Media Controls**: Built on the Media Session API, so lock screens, notification bars, and desktop control centers can play, pause, skip, and scrub.
-- **Cross-Platform Layout**: A responsive design covering phones, tablets, and desktops, with local folder import through the File System Access API.
-- **State Persistence**: Playback progress, play statistics, and queue order are saved automatically and restored after a page refresh.
-
-### 🛠️ Feature Highlights
+### Features
 
 | Module | Description |
 | :--- | :--- |
-| **Playback Control** | Sequential, single-loop, and shuffle modes; volume adjustment and progress bar scrubbing. |
-| **Keyboard Shortcuts** | Space to play or pause; ← / → to seek back or forward 5 seconds (ignored while a form field has focus). |
-| **Lyrics Display** | Click the "显示歌词" (Show Lyrics) button to toggle the lyrics view; the lyrics delay can be fine-tuned; click a lyrics line to jump to its timestamp. |
-| **Playlist Management** | Create custom playlists and add or remove songs in batches; the library and playlists are sorted by name in natural order, and playing from a playlist follows that playlist's order. |
-| **Local Import** | Select a local folder and the audio files in it are recognized and added to the library automatically. |
-| **Statistics & Analytics** | Play counts are recorded per song and can be sorted by popularity. |
-| **Data Management** | Clear the whole cache, delete one song's cache, or remove songs from all lists. |
+| Playback | Sequential, single-loop and shuffle modes; volume control and progress seeking |
+| Shortcuts | Space toggles playback; left and right arrows seek by 5 seconds (ignored while a form control has focus) |
+| Lyrics | Word-level highlighting with translations; click a line to seek; opening the view jumps to the current line; the delay is tuned in Settings |
+| Playlists | Custom playlists with batch edits; sorted by name, duration, added time or size |
+| Local import | Select a folder and the audio files are added to the library |
+| Statistics | Per-song play counts, viewable by popularity |
+| Data | Clear the whole cache, delete one song's cache, or remove songs from all lists |
+| Appearance | Light and dark themes; background colour blobs derive from the current cover |
 
-### 📦 Tech Stack
+### Layout
 
-- **Core Languages**: HTML5, JavaScript (ES6+)
-- **Front-end Libraries**:
-  - `jsmediatags`: Reads audio file tags such as ID3 and MP4, including cover art, artist, and album.
-  - `bootstrap-icons` (Bootstrap Icons): the source of every glyph in the UI. The upstream sprite
-    carries 2000+ icons; this project keeps only the ones it uses, inlined in `music.html`.
-- **Storage**: IndexedDB, accessed through the browser's native interfaces.
-- **Styling & Layout**: Native CSS3 with Flexbox; no third-party UI framework.
-- **Progress / Volume**: `<input type="range">` styled with pure CSS — the played portion follows the
-  thumb position (a thumb `box-shadow` on Chromium/Safari, `::-moz-range-progress` on Firefox) and the
-  unplayed track uses the `--color-track` theme token, so both light and dark themes read correctly
-  with no JS syncing at all.
-- **Key APIs**: Media Session API (media controls), File System Access API (local folder access).
+- The player switches by viewport orientation: cover above the controls in portrait, cover beside
+  the controls in landscape.
+- In landscape, enabling lyrics replaces only the control area to the right of the cover; the cover
+  stays visible. In portrait the lyrics take the whole view.
+- The lyrics view hides its scrollbar while remaining scrollable.
+- Play mode, transport buttons and volume stay on a single line at every viewport and shrink as
+  space narrows.
+- The bottom navigation is a floating pill with a blurred backdrop and takes no layout height; the
+  active item is marked with a tinted capsule while its label and icon use the accent colour.
+- Cards, list rows, dialogs, scrollbars and status badges share one translucent background: black in
+  the light theme, white in the dark theme. Controls that carried a semantic colour (buttons, cache
+  badges) use that colour as their foreground.
+- Every page keeps its scrollbar pinned to the right edge of the viewport.
+- Cover, buttons and panels scale fluidly with the viewport.
 
-### 🚀 Quick Start
+### Tunable parameters
+
+Appearance is driven by the design tokens in `css/variables.css`; a single edit applies everywhere.
+
+| Parameter | Default | Location | Effect |
+| :--- | :--- | :--- | :--- |
+| `--color-keep` | `0.85` | `css/variables.css`, translucent-material block | Share of the cover colour kept in the background blobs, 0 to 1; higher stays closer to the source colour |
+| `--surface-1-alpha` | `0.05` | same | Opacity for list rows, cards and scrollbar tracks |
+| `--surface-2-alpha` | `0.08` | same | Opacity for buttons, dialogs, the navigation pill and the lyrics view |
+| `--surface-3-alpha` | `0.12` | same | Opacity for hover states and the active item |
+| `--page-max-width` | `1000px` | same, layout-constants block | Content width cap for the list, statistics and settings pages |
+
+Concrete light and dark values live in the theme blocks of `css/responsive.css`, where the
+translucent layer resolves to black and white respectively, as does the blend base `--ambient-mix`.
+
+### Tech stack
+
+- Core: HTML5, JavaScript (ES6+); no build step
+- Libraries:
+  - jsmediatags: reads ID3 and MP4 tags for cover art, artist and album
+  - ColorThief: extracts key colours from the cover for the background blobs
+  - Bootstrap Icons: icon source, inlined as a sprite in `music.html`
+- Storage: IndexedDB through the browser's native interfaces
+- Styling: native CSS3 with Flexbox; no third-party UI framework
+- Key APIs: Media Session API, File System Access API
+
+### Quick start
 
 The project is a set of static files and needs no build step.
 
-#### 1. Run Directly
-- Opening `music.html` straight from disk works too: the icon sprite is inlined into the page, so no
-  external request is involved.
-- *To read local folders or use the caching features, serving over a local server is required.*
+1. Run directly: open `music.html`. Reading local folders and using the cache require a server.
+2. Static server: place the directory under the root of Nginx, Apache or any static file server.
+3. With ESP32: upload the files to SPIFFS or LittleFS, start the web server and open its address on
+   the local network.
 
-#### 2. Deploy on a Static Server (Recommended)
-Place the whole directory under the root of Nginx, Apache, or any static file server.
+### Backend endpoints
 
-#### 3. Use with ESP32/ESP8266
-- Upload the static files to the ESP32's SPIFFS or LittleFS partition.
-- Start the Web Server service on the ESP32.
-- Connect to the ESP32's hotspot or its LAN and open its IP address in a browser to control playback.
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/music_list` | GET | Returns a JSON array of song file names |
+| `/music_play` | GET | Takes `file` and returns the audio stream |
 
-### 🎛️ Backend API Reference
+### Known limitations
 
-The front end calls the endpoints below through the Fetch API to retrieve the file list and audio data.
+- The closed state of the select control is drawn by the stylesheet. The expanded option panel is
+  rendered by the operating system and cannot be restyled; `color-scheme` only lets it follow the
+  active theme.
 
-| Endpoint | Method | Description | Expected Response / Parameters |
-| :--- | :--- | :--- | :--- |
-| `/music_list` | GET | Retrieve the server-side song list | A JSON array of filenames |
-| `/music_play` | GET | Stream a specific song | Parameter `file=filename`; returns an audio stream |
+### Licences
 
-### 🤝 Contributing
+- [jsmediatags](https://github.com/aadsm/jsmediatags): MIT
+- [ColorThief](https://github.com/lokesh/color-thief): MIT
+- [Bootstrap Icons](https://github.com/twbs/icons): MIT
 
-Contributions via Issues or Pull Requests are welcome:
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## Dependencies
-
-- [jsmediatags](https://github.com/aadsm/jsmediatags)  
-  Reads metadata from audio files.  
-  **License**: MIT  
-  **Copyright**: (c) 2008 Jacob Seidelin, (c) 2009 Opera Software ASA, (c) 2010 Joshua Kifer, (c) 2015 António Afonso
-
-- [Bootstrap Icons](https://github.com/twbs/icons)  
-  Source of the UI glyphs, trimmed to the icons in use and inlined into `music.html`.
-  To add an icon, copy the matching `<symbol>` from the upstream sprite.  
-  **License**: MIT  
-  **Copyright**: (c) 2019-2024 The Bootstrap Authors
-
-### 📄 License
-
-Released under the MIT License; see [LICENSE.md](LICENSE.md) for details.
-
-<p align="center">
-  <a href="#-english-version"><img src="https://img.shields.io/badge/⬆%20Back%20to%20Top-English-blue?style=flat-square" alt="Back to top"></a>
-</p>
+Released under the MIT License; see [LICENSE.md](LICENSE.md). Third-party notices are listed in
+[NOTICE.md](NOTICE.md).

@@ -1,9 +1,8 @@
 /* ========== 歌曲列表页面 ========== */
+/* 宽度上限通过左右内边距实现，页面本身保持满宽：
+   这样滚动条固定在视口最右侧，与播放器页一致 */
 #page-lists {
-  padding: var(--spacing-xl);
-  /* 与设置页同一条宽度上限，宽屏下居中显示 */
-  max-width: var(--page-max-width);
-  margin: 0 auto;
+  padding: var(--spacing-xl) max(var(--spacing-xl), calc((100% - var(--page-max-width)) / 2)) var(--navbar-height);
 }
 
 /* 新建歌单：输入框 + 创建按钮 */
@@ -17,13 +16,19 @@
   flex: 1;
   min-width: 0;
   padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--color-border);
+  /* 与下拉框、按钮共用同一层玻璃底 */
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-sm);
-  background: var(--color-bg-primary);
+  background: var(--surface-2);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   font-family: inherit;
-  transition: border-color var(--transition-base);
+  transition: border-color var(--transition-base),
+              background-color var(--transition-base);
+}
+
+.new-list-row input:hover {
+  background: var(--surface-3);
 }
 
 .new-list-row input:focus-visible {
@@ -41,9 +46,9 @@
   cursor: pointer;
   user-select: none;
   padding: var(--spacing-md);
-  background: var(--color-bg-primary);
+  background: var(--surface-1);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--surface-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -51,7 +56,7 @@
 }
 
 .list-title:hover {
-  background: var(--color-bg-secondary);
+  background: var(--surface-3);
 }
 
 .list-title:focus-visible {
@@ -69,13 +74,13 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
-  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-1);
   transition: background var(--transition-base);
 }
 
 .song-item:hover {
-  background: var(--color-bg-secondary);
+  background: var(--surface-1);
 }
 
 .song-item .song-name {

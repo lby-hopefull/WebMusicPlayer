@@ -15,45 +15,63 @@ body {
   line-height: var(--line-height-normal);
 }
 
-/* 滚动条样式 - 支持深色浅色模式 */
+/* ========== 滚动条 ========== */
+/* 滑块颜色取自动态灰阶（--scrollbar-thumb 由 --color-text-tertiary 推导），
+   因此浅色主题偏深、深色主题偏亮，与正文灰阶同步调整；
+   轨道为最浅一级半透明底。页面滚动条固定在视口最右侧。 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-text-tertiary) var(--color-bg-secondary);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-/* WebKit 滚动条样式 */
+/* 始终预留滚动条槽位：列表、设置、统计等页面在内容增减时不会因滚动条
+   出现或消失而改变可用宽度（否则行宽、网格列宽会跳变）。
+   播放器页不参与：它的滚动由内部的 #player-swiper 承担，
+   若外层 section 再预留一次，会在视口右缘与滚动条之间多出一条空白。 */
+#page-lists,
+#page-stats,
+#page-settings,
+#player-swiper,
+#playlist,
+#dialogSongList {
+  scrollbar-gutter: stable;
+}
+
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 *::-webkit-scrollbar-track {
-  background: var(--color-bg-secondary);
-  border-radius: 4px;
+  background: var(--scrollbar-track);
+  border-radius: 5px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--color-text-tertiary);
-  border-radius: 4px;
+  background: var(--scrollbar-thumb);
+  border-radius: 5px;
   transition: background var(--transition-base);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
+  background: var(--scrollbar-thumb-hover);
 }
 
 *::-webkit-scrollbar-corner {
-  background: var(--color-bg-secondary);
+  background: var(--scrollbar-track);
 }
 
-/* 统一按钮样式 */
+/* ========== 统一按钮样式 ========== */
+/* 所有按钮使用半透明底（浅色主题为半透明黑、深色主题为半透明白），
+   文字与 SVG 图标沿用该控件原本的背景色作为前景色：
+   主按钮为 --color-primary，危险/警告/成功按钮分别取对应功能色。 */
 button {
   padding: var(--spacing-sm) var(--spacing-lg);
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  background: var(--color-primary);
-  color: white;
+  background: var(--surface-2);
+  color: var(--color-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   transition: background var(--transition-base),
@@ -61,7 +79,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: var(--color-primary-dark);
+  background: var(--surface-3);
   transform: scale(1.02);
 }
 
@@ -71,9 +89,94 @@ button:focus-visible {
 }
 
 button:disabled {
-  background: var(--color-text-disabled);
+  color: var(--color-text-disabled);
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* ========== 背景动态色斑 ========== */
+/* 关键色由 js/ambience.js 从封面提取，写入 --ambient-1..3。
+   浅色主题与白混合、深色主题与黑混合（--ambient-mix），
+   避免色斑在浅色底上过艳、在深色底上过暗。 */
+#ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity var(--transition-slow);
+}
+
+/* 无封面或取色失败时不绘制色斑，背景保持主题底色（浅色即全白） */
+#ambient.is-empty {
+  opacity: 0;
+}
+
+#ambient .blob {
+  position: absolute;
+  width: 68vmax;
+  height: 68vmax;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.55;
+  will-change: transform;
+}
+
+/* 三个光斑的原色占比统一由 --color-keep 控制（见 css/variables.css）：
+   数值越大越接近封面原色；后两个光斑按比例略低，避免三个光斑完全同调 */
+#ambient .blob:nth-child(1) {
+  top: -24vmax;
+  left: -18vmax;
+  background: radial-gradient(circle, var(--ambient-1, var(--color-primary)), transparent 68%);
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--ambient-1, var(--color-primary)) calc(var(--color-keep) * 100%), var(--ambient-mix)),
+    transparent 68%);
+  animation: ambient-drift-a 46s ease-in-out infinite alternate;
+}
+
+#ambient .blob:nth-child(2) {
+  top: 18vmax;
+  right: -26vmax;
+  width: 62vmax;
+  height: 62vmax;
+  background: radial-gradient(circle, var(--ambient-2, var(--color-primary-dark)), transparent 68%);
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--ambient-2, var(--color-primary-dark)) calc(var(--color-keep) * 92%), var(--ambient-mix)),
+    transparent 68%);
+  animation: ambient-drift-b 62s ease-in-out infinite alternate;
+}
+
+#ambient .blob:nth-child(3) {
+  bottom: -30vmax;
+  left: 22vmax;
+  width: 56vmax;
+  height: 56vmax;
+  background: radial-gradient(circle, var(--ambient-3, var(--color-primary-light)), transparent 68%);
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--ambient-3, var(--color-primary-light)) calc(var(--color-keep) * 84%), var(--ambient-mix)),
+    transparent 68%);
+  animation: ambient-drift-c 54s ease-in-out infinite alternate;
+}
+
+@keyframes ambient-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(12%, 9%, 0) scale(1.14); }
+}
+
+@keyframes ambient-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.06); }
+  to   { transform: translate3d(-14%, 12%, 0) scale(1); }
+}
+
+@keyframes ambient-drift-c {
+  from { transform: translate3d(0, 0, 0) scale(1.1); }
+  to   { transform: translate3d(-10%, -12%, 0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ambient .blob {
+    animation: none;
+  }
 }
 
 /* ========== 图标（全局 SVG sprite） ========== */
@@ -90,8 +193,11 @@ button:disabled {
 }
 
 /* 页面容器 */
+/* 底部导航为悬浮胶囊，不占用布局高度：容器取满视口，
+   各页面以 padding-bottom 让出胶囊覆盖区域，滚动条因此固定在最右侧 */
 .page-container {
-  height: calc(100vh - var(--navbar-height));
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -99,50 +205,75 @@ button:disabled {
   height: 100%;
   display: none;
   overflow-y: auto;
+  padding-bottom: var(--navbar-height);
+}
+
+/* 播放器页不为胶囊预留底部空间：胶囊直接悬浮在内容之上 */
+#page-player {
+  padding-bottom: 0;
 }
 
 .page-container > section.active {
   display: block;
 }
 
-/* 底部导航栏 */
+/* ========== 底部导航：悬浮胶囊 + 毛玻璃 ========== */
 .navbar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  bottom: var(--spacing-md);
+  transform: translateX(-50%);
   display: flex;
-  justify-content: space-around;
-  background: var(--color-bg-primary);
-  border-top: 1px solid var(--color-border);
+  justify-content: center;
+  /* 四项之间留出更宽的间距，避免图标与文字挤在一起 */
+  gap: var(--spacing-md);
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--spacing-md));
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-full);
+  /* 胶囊比页面其他表面混合更多黑白，配合毛玻璃形成独立浮层 */
+  background: var(--surface-4);
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
+  box-shadow: var(--shadow-md);
   z-index: var(--navbar-z-index);
-  height: var(--navbar-height);
 }
 
+/* 当前项的高亮分两级：容器用淡色胶囊，文字与图标用主色，
+   两者处理方式不同，避免整块变成实心色条 */
 .navbar button {
-  flex: 1;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: var(--spacing-xs);
-  background: none;
+  gap: var(--spacing-xs);
+  /* 点击热区不小于 44px */
+  min-width: 56px;
+  min-height: 44px;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: transparent;
   border: none;
-  color: var(--color-text-primary);
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
-  border-radius: 0;
-  transition: background var(--transition-base);
+  transition: color var(--transition-base),
+              background var(--transition-base);
 }
 
-/* 导航图标固定尺寸：不随 12px 的说明文字缩小 */
 .navbar button .icon {
   font-size: 20px;
 }
 
 .navbar button:hover:not(:disabled) {
-  background: var(--color-bg-tertiary);
+  background: var(--surface-2);
   transform: none;
+}
+
+.navbar button.active {
+  background: var(--nav-item-active);
+  color: var(--color-primary);
 }
 
 .navbar button:focus-visible {
@@ -157,6 +288,183 @@ button:disabled {
   padding: var(--spacing-lg);
 }
 
+/* ========== 下拉选择 ========== */
+/* 原生 <select> 的展开面板由操作系统绘制且无法改写，因此由 js/select.js 生成
+   「按钮 + 列表框」承担显示；<select> 仅保留取值与 change 事件。
+   脚本未执行时退回原生控件，闭合状态仍为下列自绘样式。 */
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: var(--spacing-xs) calc(var(--spacing-xl) + 12px) var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-2);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+  cursor: pointer;
+  /* 自绘箭头：内联 SVG，避免额外请求 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%238a8a8a' d='M8 11.2 3.2 6.4l.85-.85L8 9.5l3.95-3.95.85.85z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-sm) center;
+  background-size: 14px 14px;
+  transition: border-color var(--transition-base),
+              background-color var(--transition-base);
+}
+
+select:hover {
+  background-color: var(--surface-3);
+}
+
+select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+select option {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+/* 自定义下拉：容器、触发器、列表框 */
+.select-widget {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  white-space: nowrap;
+}
+
+.select-trigger:hover:not(:disabled) {
+  background: var(--surface-3);
+  transform: none;
+}
+
+.select-trigger-icon {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  /* 右向箭头旋转成向下；展开时朝上 */
+  transform: rotate(90deg);
+  transition: transform var(--transition-base);
+}
+
+.select-trigger[aria-expanded="true"] .select-trigger-icon {
+  transform: rotate(-90deg);
+}
+
+.select-list {
+  position: absolute;
+  top: calc(100% + var(--spacing-xs));
+  left: 0;
+  z-index: 60;
+  min-width: 100%;
+  max-height: 40vh;
+  margin: 0;
+  padding: var(--spacing-xs);
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  /* 展开面板与其他浮层同素材：半透明底 + 毛玻璃，不做饱和度增强 */
+  background: var(--surface-4);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-md);
+}
+
+.select-option {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.select-option:hover,
+.select-option.is-active {
+  background: var(--surface-3);
+}
+
+.select-option[aria-selected="true"] {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* 被替代的原生控件：退出布局与命中测试，取值仍可用 */
+.select-native-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+}
+
+/* ========== 勾选框：不使用浏览器默认外观 ========== */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: background var(--transition-base),
+              border-color var(--transition-base);
+}
+
+input[type="checkbox"]::before {
+  content: "";
+  width: 11px;
+  height: 11px;
+  transform: scale(0);
+  transition: transform var(--transition-fast);
+  background-color: var(--color-primary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6.1 11.9 2.6 8.4l1.2-1.2 2.3 2.3 5.7-5.7 1.2 1.2z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6.1 11.9 2.6 8.4l1.2-1.2 2.3 2.3 5.7-5.7 1.2 1.2z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+input[type="checkbox"]:hover {
+  background: var(--surface-3);
+}
+
+input[type="checkbox"]:checked {
+  border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+  background: var(--surface-3);
+}
+
+input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* ========== 排序工具条（歌曲列表页 / 管理页共用） ========== */
 .sort-bar {
   display: flex;
@@ -166,21 +474,6 @@ button:disabled {
   margin-bottom: var(--spacing-md);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-}
-
-.sort-bar select {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  transition: border-color var(--transition-base);
-}
-
-.sort-bar select:focus-visible {
-  outline: 2px solid var(--color-primary);
-  border-color: var(--color-primary);
 }
 
 /* 歌曲一行元信息（时长 · 大小 · 加入时间） */
@@ -193,11 +486,15 @@ button:disabled {
 }
 
 /* ========== 通用对话框（替代 alert / confirm） ========== */
-/* 原生 alert/confirm 会阻塞渲染线程；改用 <dialog> + showModal，既不阻塞线程，样式也可自定义 */
+/* 原生 alert/confirm 会阻塞渲染线程；改用 <dialog> + showModal，既不阻塞线程，样式也可自定义。
+   对话框属于浮层，与导航胶囊、下拉面板同用最高一级半透明底 + 毛玻璃。 */
 #appDialog {
   padding: var(--spacing-2xl);
-  border: none;
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-lg);
+  background: var(--surface-4);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
   box-shadow: var(--shadow-lg);
   max-width: min(90vw, 420px);
   margin: auto;
@@ -232,18 +529,15 @@ button:disabled {
   display: none;
 }
 
-/* 对话框里的「取消」一律用中性灰，不与主按钮抢注意力
+/* 对话框里的「取消」用中性前景色，不与主按钮抢注意力
    （通用确认框与「选择歌曲」对话框共用） */
 .dialog-btn-cancel {
-  background: #9e9e9e;
+  color: var(--color-text-secondary);
 }
 
-.dialog-btn-cancel:hover:not(:disabled) {
-  background: #757575;
-}
-
-/* #appDialog 打开时背景是半透明遮罩，正文底色需要显式给 */
-#appDialog {
-  background: var(--color-bg-primary);
+/* 输入框占位文字沿用动态灰阶，避免浏览器默认的浅灰在浅色底上过淡 */
+input::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
 }
 

@@ -21,6 +21,17 @@ Copyright (c) 2015 António Afonso
 This component is provided under the MIT License.
 For more information, please visit: https://opensource.org/licenses/MIT
 
+ColorThief
+----------
+Copyright (c) 2015 Lokesh Dhakar
+https://github.com/lokesh/color-thief
+
+Vendored as `js/color-thief.min.js` and used to extract the dominant colours of the album cover
+for the background colour blobs.
+
+This component is provided under the MIT License.
+For more information, please visit: https://opensource.org/licenses/MIT
+
 MIT License Text:
 Permission is hereby granted, free of charge, to any person obtaining a copy of 
 this software and associated documentation files (the “Software”), to deal in 

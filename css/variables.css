@@ -22,21 +22,47 @@
   --color-danger-dark: #d32f2f;
 
   /* 中性色 */
+  /* 次要 / 三级文字由主文字色与页面底色动态混出：
+     浅色主题得到更深、深色主题得到更亮的灰，避免小字号在浅色底上失去可读性 */
   --color-text-primary: #333;
-  --color-text-secondary: #666;
-  --color-text-tertiary: #999;
-  --color-text-disabled: #ccc;
+  --color-text-secondary: color-mix(in srgb, var(--color-text-primary) 80%, var(--color-bg-secondary));
+  --color-text-tertiary: color-mix(in srgb, var(--color-text-primary) 68%, var(--color-bg-secondary));
+  --color-text-disabled: color-mix(in srgb, var(--color-text-primary) 38%, var(--color-bg-secondary));
 
   --color-bg-primary: #fff;
   --color-bg-secondary: #f5f5f5;
   --color-bg-tertiary: #f0f0f0;
   --color-border: #ddd;
   --color-border-light: #eee;
-  /* 进度条 / 音量条的未播放轨道：比边框稍深，保证在浅色背景下也看得见 */
-  --color-track: #d2d2d2;
-  /* 进度条 / 音量条的滑块：两种主题都用白色，压在蓝色填充上才立得住
-     （用 --color-bg-primary 在深色主题会变成一颗黑点） */
-  --color-slider-thumb: #fff;
+
+  /* ========== 半透明材质（统一背景 + 反色前景） ========== */
+  /* 全站所有“有色块”的表面（卡片、行、对话框、导航胶囊、滚动条、标签）
+     统一使用以下半透明背景：浅色主题为半透明黑，深色主题为半透明白。
+     原本带语义色的控件（按钮、缓存标签）把原背景色转为前景色，见 base.css。
+     调整强度只需改下列 alpha，主题色值在 responsive.css 中覆盖。 */
+  --surface-1-alpha: 0.05;   /* 列表行、卡片、滚动条轨道 */
+  --surface-2-alpha: 0.08;   /* 按钮、对话框、歌词浮层、下拉选项面板 */
+  --surface-3-alpha: 0.12;   /* 悬停、当前项容器、进度条未播放段 */
+  --surface-4-alpha: 0.1;   /* 浮层：底部导航胶囊、下拉面板、对话框 */
+  --surface-1: rgba(0, 0, 0, var(--surface-1-alpha));
+  --surface-2: rgba(0, 0, 0, var(--surface-2-alpha));
+  --surface-3: rgba(0, 0, 0, var(--surface-3-alpha));
+  --surface-4: rgba(0, 0, 0, var(--surface-4-alpha));
+  --surface-border: rgba(0, 0, 0, 0.08);
+  /* 当前项的容器高亮：主色淡染，与文字/图标的主色高亮形成两级区分 */
+  --nav-item-active: color-mix(in srgb, var(--color-primary) 16%, transparent);
+
+  /* 滚动条：滑块与轨道同样由动态灰阶推导，随主题自动变深或变亮 */
+  --scrollbar-track: var(--surface-1);
+  --scrollbar-thumb: color-mix(in srgb, var(--color-text-tertiary) 70%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--color-text-secondary) 85%, transparent);
+
+  /* 原色保留比例（0~1）：控制背景色斑与黑/白的混合强度。
+     数值越大越接近封面原色，越小越接近主题底色。 */
+  --color-keep: 1;
+
+  /* 背景色斑的混合基准：浅色主题与白混合、深色主题与黑混合 */
+  --ambient-mix: #ffffff;
 
   /* 歌词：当前行里「已唱 / 未唱」两段的文字颜色。
      强调方向随主题反转 —— 浅色背景上「更深更艳」才醒目，
@@ -102,7 +128,8 @@
   --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ========== 布局常量 ========== */
-  --navbar-height: 50px;
+  /* 底部导航改为悬浮胶囊后，为它保留的高度（胶囊 56px + 上下留白） */
+  --navbar-height: 96px;
   --navbar-z-index: 100;
   --dialog-z-index: 200;
   /* 各页面内容的显示宽度上限（居中）：宽屏下列表、统计、设置页保持同一条

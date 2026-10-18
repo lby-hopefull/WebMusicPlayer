@@ -1,21 +1,20 @@
 /* ========== 统计页面 ========== */
+/* 宽度上限通过左右内边距实现，页面本身保持满宽：
+   这样滚动条固定在视口最右侧，与播放器页一致 */
 #page-stats {
-  padding: var(--spacing-xl);
-  /* 与设置页同一条宽度上限，宽屏下居中显示 */
-  max-width: var(--page-max-width);
-  margin: 0 auto;
+  padding: var(--spacing-xl) max(var(--spacing-xl), calc((100% - var(--page-max-width)) / 2)) var(--navbar-height);
 }
 
 #stats {
-  background: var(--color-bg-primary);
+  background: var(--surface-1);
   border-radius: var(--radius-md);
   padding: var(--spacing-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--surface-border);
 }
 
 #stats div {
   padding: var(--spacing-md) 0;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--surface-border);
   display: flex;
   justify-content: space-between;
 }
@@ -29,4 +28,3 @@
   display: block;
   text-align: center;
 }
-

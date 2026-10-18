@@ -273,12 +273,15 @@ function setCover(picture) {
     img.src = coverObjectUrl;
     img.style.display = 'block';
     placeholder.style.display = 'none';
+    // 封面就绪后提取主色，驱动背景色斑（见 ambience.js）
+    extractAmbientFrom(img);
     return coverObjectUrl;
   }
 
   img.removeAttribute('src');
   img.style.display = 'none';
   placeholder.style.display = 'block';
+  resetAmbient();
   return null;
 }
 
@@ -383,8 +386,8 @@ function alignLyricsToActive() {
 
 function renderLyrics() {
   const box = document.getElementById('lyricsContainer');
-  const delayControl = document.getElementById('lyricDelayControl');
-  box.replaceChildren(delayControl);
+  // 歌词视图内只保留歌词行；延迟调整入口已迁至设置页
+  box.replaceChildren();
   lyricRows = [];
   activeLineIdx = -1;
   activeWordIdx = -1;
@@ -630,23 +633,25 @@ audio.addEventListener('ended', () => { stopLyricLoop(); updateLyricHighlight();
 // 拖动进度条或点击歌词跳转后立即对齐，无需等待下一帧循环
 audio.addEventListener('seeked', () => updateLyricHighlight());
 
+// 歌词视图的显隐由 #page-player 上的 .lyrics-on 类控制：
+// 竖屏下容器定位为整屏浮层，横屏下则留在播放面板内部、替换控制区（见 css/player.css）。
+// 同时在 body 上标记 lyrics-open：竖屏歌词占满整屏时据此隐藏底部胶囊并铺满底部。
 function toggleCoverLyric() {
-  const lyrics = document.getElementById('lyricsContainer');
+  const page = document.getElementById('page-player');
   const btn = document.getElementById('coverLyricToggle');
   const label = document.getElementById('coverLyricToggleLabel');
-  const showingLyrics = lyrics.style.display === 'block';
+  const showingLyrics = page.classList.toggle('lyrics-on');
+  document.body.classList.toggle('lyrics-open', showingLyrics);
 
-  if (!showingLyrics) {
-    lyrics.style.display = 'block';
+  if (showingLyrics) {
     label.textContent = '显示封面';
     setIcon(btn.querySelector('svg'), 'image');
     btn.setAttribute('aria-label', '切换到封面界面');
-    // 容器变可见之后才有真实高度：先对齐当前行的高亮，再把这一行滚到视口中间
-    // （开启瞬间直接跳到位，不从第一行滑下来）
+    // 容器变为可见后才有真实高度：先对齐当前行的高亮，再把该行滚到视口中间，
+    // 开启瞬间直接到位，不从首行滑下来
     updateLyricHighlight();
     alignLyricsToActive();
   } else {
-    lyrics.style.display = 'none';
     label.textContent = '显示歌词';
     setIcon(btn.querySelector('svg'), 'file-earmark-text');
     btn.setAttribute('aria-label', '切换到歌词界面');

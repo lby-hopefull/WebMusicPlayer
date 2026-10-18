@@ -1,10 +1,16 @@
 // ========== 页面切换函数 ==========
+// 导航按钮的 id 与页码一一对应，当前页对应的按钮加 .active（容器与文字分别高亮）
 function showPage(pageName) {
   document.querySelectorAll('.page-container > section').forEach(sec => {
     sec.classList.remove('active');
   });
   document.getElementById('page-' + pageName).classList.add('active');
-  
+
+  const navId = 'nav' + pageName.charAt(0).toUpperCase() + pageName.slice(1);
+  document.querySelectorAll('.navbar button').forEach(btn => {
+    btn.classList.toggle('active', btn.id === navId);
+  });
+
   if(pageName === 'manage') {
     renderManageList();
   } else if(pageName === 'lists') {

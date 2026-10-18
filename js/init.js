@@ -17,6 +17,8 @@
   if(playModeSetting && playModeSetting.data) {
     document.getElementById('playMode').value = playModeSetting.data;
   }
+  // 下拉框由 select.js 接管显示，程序改动取值后同步按钮文案
+  syncAllCustomSelects();
   
   // 播放模式改变时保存 —— 事件接线统一收口到 bindings.js
   
