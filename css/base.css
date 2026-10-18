@@ -438,13 +438,15 @@ input[type="checkbox"] {
 
 input[type="checkbox"]::before {
   content: "";
-  width: 11px;
-  height: 11px;
+  /* 勾号尺寸与线宽：14px 的画布配 3 单位粗细，缩放后仍清晰 */
+  width: 14px;
+  height: 14px;
   transform: scale(0);
   transition: transform var(--transition-fast);
   background-color: var(--color-primary);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6.1 11.9 2.6 8.4l1.2-1.2 2.3 2.3 5.7-5.7 1.2 1.2z'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6.1 11.9 2.6 8.4l1.2-1.2 2.3 2.3 5.7-5.7 1.2 1.2z'/%3E%3C/svg%3E") center / contain no-repeat;
+  /* 勾号用描边路径（圆头、加粗），遮罩只取透明度，故颜色写黑即可 */
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 8.6 6.2 12.2 13.4 4.6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 8.6 6.2 12.2 13.4 4.6'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 input[type="checkbox"]:hover {

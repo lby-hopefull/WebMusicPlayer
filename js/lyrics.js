@@ -344,27 +344,31 @@ function loadSongMetadata(songName, audioUrl) {
 }
 
 // ========== 歌词渲染（引用一次性建成，之后只按索引访问） ==========
+// 把某一行的中线对齐到容器中线。用视口坐标求差值，
+// 与 offsetTop / padding / 容器定位方式（竖屏 fixed、横屏 static）无关。
+function centerOffsetFor(row) {
+  const box = document.getElementById('lyricsContainer');
+  if (!box || !row) return null;
+  const boxRect = box.getBoundingClientRect();
+  const rowRect = row.el.getBoundingClientRect();
+  return (rowRect.top + rowRect.height / 2) - (boxRect.top + boxRect.height / 2);
+}
+
+// 换行时滚动：仅在歌词行切换时调用，不用计时器，也不因用户滚动而暂停
 function scrollLyricToCenter(idx) {
-  if (isUserScrollingLyrics) return;
   const row = lyricRows[idx];
   if (!row) return;
   const box = document.getElementById('lyricsContainer');
-  const rowTop = row.el.offsetTop;
-  const boxHeight = box.clientHeight;
-  const rowHeight = row.el.offsetHeight;
-  const scrollTop = rowTop - (boxHeight / 2) + (rowHeight / 2);
-  
+  const delta = centerOffsetFor(row);
+  if (delta === null) return;
   box.scrollTo({
-    top: Math.max(0, scrollTop),
+    top: Math.max(0, box.scrollTop + delta),
     behavior: 'smooth'
   });
 }
 
-// 打开歌词界面时，直接把当前正在唱的那一行摆到视口中央。
-// 不能只靠 scrollLyricToCenter：它只在「换行」时才触发，且容器刚从 display:none
-// 变为可见时高度还是 0，按它算出来的位置是错的。这里改用视口坐标求差值，
-// 与 padding、offsetTop 的换算无关；同时临时关掉 scroll-behavior，
-// 避免从顶部一路平滑滑下来。
+// 打开歌词界面时立刻把当前行摆到中央：容器刚从 display:none 变为可见时
+// 高度还是 0，且此时不宜做平滑动画，因此关闭 scroll-behavior 直接定位。
 function alignLyricsToActive() {
   const box = document.getElementById('lyricsContainer');
   if (!box || !lyricRows.length) return;
@@ -372,11 +376,8 @@ function alignLyricsToActive() {
   let idx = activeLineIdx;
   if (idx < 0) idx = findActiveLineIndex(currentLyrics, audio.currentTime - lyricDelay);
   const row = lyricRows[idx >= 0 ? idx : 0];   // 尚未进入任何一行时落到第一行
-  if (!row) return;
-
-  const boxRect = box.getBoundingClientRect();
-  const rowRect = row.el.getBoundingClientRect();
-  const delta = (rowRect.top + rowRect.height / 2) - (boxRect.top + boxRect.height / 2);
+  const delta = centerOffsetFor(row);
+  if (delta === null) return;
 
   const prevBehavior = box.style.scrollBehavior;
   box.style.scrollBehavior = 'auto';
@@ -468,13 +469,6 @@ function jumpToLyric(index) {
     audio.play().catch(err=>{ console.warn('play() 被中断：', err.name); }); isPlaying = true; updateBtn();
   }
 }
-
-let userScrollTimeout = null;
-document.getElementById('lyricsContainer').addEventListener('scroll', () => {
-  isUserScrollingLyrics = true;
-  clearTimeout(userScrollTimeout);
-  userScrollTimeout = setTimeout(() => isUserScrollingLyrics = false, 3000);
-});
 
 // ========== 歌词高亮（rAF 驱动 + 二分查找 + 增量更新） ==========
 // 某一行内的填充进度，取值 0~1
@@ -635,25 +629,52 @@ audio.addEventListener('seeked', () => updateLyricHighlight());
 
 // 歌词视图的显隐由 #page-player 上的 .lyrics-on 类控制：
 // 竖屏下容器定位为整屏浮层，横屏下则留在播放面板内部、替换控制区（见 css/player.css）。
-// 同时在 body 上标记 lyrics-open：竖屏歌词占满整屏时据此隐藏底部胶囊并铺满底部。
-function toggleCoverLyric() {
-  const page = document.getElementById('page-player');
+// 同时在 body 上标记 lyrics-open：竖屏歌词铺满整屏，据此让底部胶囊悬浮其上。
+const landscapeQuery = window.matchMedia('(orientation: landscape)');
+
+// 按钮文案与图标取决于「当前是否显示歌词」以及视口方向：
+// 竖屏下歌词覆盖整屏，按钮语义是回到封面；
+// 横屏下歌词只替换右侧控制区，按钮语义是回到播放控制，图标取播放器所用的那枚。
+function renderLyricToggle(showingLyrics) {
   const btn = document.getElementById('coverLyricToggle');
   const label = document.getElementById('coverLyricToggleLabel');
+  if (!btn || !label) return;
+  const icon = btn.querySelector('svg');
+
+  if (!showingLyrics) {
+    label.textContent = '显示歌词';
+    setIcon(icon, 'file-earmark-text');
+    btn.setAttribute('aria-label', '切换到歌词界面');
+    return;
+  }
+
+  if (landscapeQuery.matches) {
+    label.textContent = '播放控制';
+    setIcon(icon, 'play-circle');
+    btn.setAttribute('aria-label', '切换到播放控制');
+  } else {
+    label.textContent = '显示封面';
+    setIcon(icon, 'image');
+    btn.setAttribute('aria-label', '切换到封面界面');
+  }
+}
+
+function toggleCoverLyric() {
+  const page = document.getElementById('page-player');
   const showingLyrics = page.classList.toggle('lyrics-on');
   document.body.classList.toggle('lyrics-open', showingLyrics);
+  renderLyricToggle(showingLyrics);
 
   if (showingLyrics) {
-    label.textContent = '显示封面';
-    setIcon(btn.querySelector('svg'), 'image');
-    btn.setAttribute('aria-label', '切换到封面界面');
-    // 容器变为可见后才有真实高度：先对齐当前行的高亮，再把该行滚到视口中间，
+    // 容器变为可见后才有真实高度：先对齐当前行的高亮，再把该行滚到视口中央，
     // 开启瞬间直接到位，不从首行滑下来
     updateLyricHighlight();
     alignLyricsToActive();
-  } else {
-    label.textContent = '显示歌词';
-    setIcon(btn.querySelector('svg'), 'file-earmark-text');
-    btn.setAttribute('aria-label', '切换到歌词界面');
   }
 }
+
+// 歌词开启状态下旋转设备时，按钮文案与图标需要同步切换
+landscapeQuery.addEventListener('change', () => {
+  const page = document.getElementById('page-player');
+  if (page && page.classList.contains('lyrics-on')) renderLyricToggle(true);
+});

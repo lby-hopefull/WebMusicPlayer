@@ -10,7 +10,7 @@ let allSongsCache = [];
 let trackedSongs = {};
 let selectedSongs = new Set();
 let isDownloading = false;
-let currentLyrics = [], isUserScrollingLyrics = false;
+let currentLyrics = [];
 // 歌词行 DOM 引用缓存：渲染时一次性建好，之后只按索引读取，不再逐帧查询 DOM
 // 结构：[{ el, lineEl, translateEl, words:[{ wrapper, fg }] }]
 let lyricRows = [];
