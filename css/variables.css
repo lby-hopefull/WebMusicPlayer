@@ -34,6 +34,15 @@
   --color-border-light: #eee;
   /* 进度条 / 音量条的未播放轨道：比边框稍深，保证在浅色背景下也看得见 */
   --color-track: #d2d2d2;
+  /* 进度条 / 音量条的滑块：两种主题都用白色，压在蓝色填充上才立得住
+     （用 --color-bg-primary 在深色主题会变成一颗黑点） */
+  --color-slider-thumb: #fff;
+
+  /* 歌词：当前行里「已唱 / 未唱」两段的文字颜色。
+     强调方向随主题反转 —— 浅色背景上「更深更艳」才醒目，
+     深色背景上则是「更亮更艳」，因此两套取值分开给 */
+  --lyric-sung: var(--color-primary);
+  --lyric-unsung: var(--color-text-primary);
 
   /* 状态色 */
   --color-backdrop: rgba(0, 0, 0, 0.45);

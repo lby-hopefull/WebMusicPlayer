@@ -155,12 +155,15 @@ input[type="range"]::-webkit-slider-thumb {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--color-bg-primary);
-  /* 关键：向左铺出的实心阴影 = 已播放段，位置由滑块决定，因此永远等于当前 value。
+  /* 白色滑块：深色主题下若用 --color-bg-primary 会变成一颗黑点 */
+  background: var(--color-slider-thumb);
+  /* 第一个阴影：向左铺出的实心色块 = 已播放段，位置由滑块决定，永远等于当前 value。
      水平偏移比铺开半径再多半个滑块宽（-100vw - 5px），使填充的右边界停在滑块
      *中心线* 而不是右缘：滑块是圆形，上下两端很窄，若边界落在右缘，圆角外侧就会
-     漏出蓝色（看起来像圆角被方角填满）。落到中心线后每一行的蓝色都被滑块盖住。 */
-  box-shadow: calc(-100vw - 5px) 0 0 100vw var(--color-primary);
+     漏出蓝色（看起来像圆角被方角填满）。落到中心线后每一行的蓝色都被滑块盖住。
+     第二个阴影是内描边，让白点在浅色主题的浅灰轨道上也立得住。 */
+  box-shadow: calc(-100vw - 5px) 0 0 100vw var(--color-primary),
+              inset 0 0 0 1.5px var(--color-primary);
 }
 
 /* Firefox：轨道 + 原生进度填充 */
@@ -179,9 +182,9 @@ input[type="range"]::-moz-range-progress {
 input[type="range"]::-moz-range-thumb {
   width: 10px;
   height: 10px;
-  border: none;
+  border: 1.5px solid var(--color-primary);
   border-radius: 50%;
-  background: var(--color-bg-primary);
+  background: var(--color-slider-thumb);
 }
 
 #progressBar {
@@ -508,7 +511,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .lyric-line-container.active-line .lyric-word-bg {
-  color: var(--color-text-primary);
+  /* 当前行里「还没唱到」的字 */
+  color: var(--lyric-unsung);
 }
 
 /* 原文容器 */
@@ -536,7 +540,8 @@ input[type="range"]::-moz-range-thumb {
   position: absolute;
   left: 0;
   top: 0;
-  color: var(--color-primary);
+  /* 已唱到的部分：强调色随主题取值（深色底上更亮） */
+  color: var(--lyric-sung);
   overflow: hidden;
   white-space: nowrap;
   /* 填充宽度由 JS 逐帧写入 --fill（0~1）。rAF 本身就是 60fps，
@@ -556,7 +561,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .lyric-line.active {
-  color: var(--color-primary);
+  /* 整行歌词（非逐字渲染）的当前行同样用「已唱」强调色 */
+  color: var(--lyric-sung);
   font-weight: var(--font-weight-bold);
   transform: scale(1.05);
 }

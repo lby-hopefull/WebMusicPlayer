@@ -197,6 +197,9 @@
     --color-border: #404040;
     --color-border-light: #3a3a3a;
     --color-track: #4f4f4f;
+    /* 深色背景上要「更亮」才算高亮：未唱段压暗，已唱段用更亮的蓝 */
+    --lyric-unsung: #7a7a7a;
+    --lyric-sung: #64b5f6;
     --color-primary-light: #1E3A8A;
   }
 
@@ -218,6 +221,9 @@ html[data-theme="dark"] {
   --color-border: #404040;
   --color-border-light: #3a3a3a;
   --color-track: #4f4f4f;
+  /* 深色背景上要「更亮」才算高亮：未唱段压暗，已唱段用更亮的蓝 */
+  --lyric-unsung: #7a7a7a;
+  --lyric-sung: #64b5f6;
   --color-primary-light: #1E3A8A;
 }
 
@@ -238,15 +244,22 @@ html[data-theme="light"] {
   --color-border: #ddd;
   --color-border-light: #eee;
   --color-track: #d2d2d2;
+  /* 浅色背景上「更深更艳」才算高亮。这里必须显式写一遍：
+     @media (prefers-color-scheme: dark) 里的深色取值在系统深色时会生效，
+     若此处不复位，应用切到浅色主题后歌词仍会沿用深色那套 */
+  --lyric-unsung: var(--color-text-primary);
+  --lyric-sung: var(--color-primary);
   --color-primary-light: #BBDEFB;
 }
 
 /* 浅色模式下的歌词对比度改进 */
-html[data-theme="light"] .lyric-word-bg,
-html[data-theme="light"] .lyric-line {
+/* 只作用于「非当前行」：当前行由 --lyric-sung / --lyric-unsung 决定，
+   否则这里的 #666 会盖掉 .lyric-line.active 的高亮色 */
+html[data-theme="light"] .lyric-line-container:not(.active-line) .lyric-word-bg,
+html[data-theme="light"] .lyric-line-container:not(.active-line) .lyric-line {
   color: #666;
 }
 
-html[data-theme="light"] .lyric-translate {
+html[data-theme="light"] .lyric-line-container:not(.active-line) .lyric-translate {
   color: #999;
 }
