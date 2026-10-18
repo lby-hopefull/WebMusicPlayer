@@ -66,8 +66,9 @@ function togglePlayPause(){
 
 function updateBtn(){
   const btn=document.getElementById('playPauseBtn');
-  btn.textContent=isPlaying?'⏸':'▶';
-  // 按钮内容只有符号，无障碍名必须跟着状态走
+  // 图标取自全局 sprite：播放与暂停只是换 <use> 的指向，不动按钮的其他结构
+  setIcon(btn.querySelector('svg'), isPlaying?'pause-fill':'play-fill');
+  // 按钮内容只有在变化时才需要同步无障碍名
   btn.setAttribute('aria-label', isPlaying?'暂停':'播放');
 }
 
@@ -252,7 +253,7 @@ function renderPlaylist(){
     // 右侧拖动排序把手
     const handle=document.createElement('span');
     handle.className='drag-handle';
-    handle.textContent='⣿';
+    handle.appendChild(iconEl('grip-vertical'));
     handle.title='长按拖动排序';
     handle.setAttribute('aria-label','长按拖动排序');
     d.appendChild(handle);

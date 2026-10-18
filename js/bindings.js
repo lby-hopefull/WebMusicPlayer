@@ -9,7 +9,7 @@
 document.getElementById('navPlayer').addEventListener('click', () => showPage('player'));
 document.getElementById('navLists').addEventListener('click', () => showPage('lists'));
 document.getElementById('navStats').addEventListener('click', () => showPage('stats'));
-document.getElementById('navManage').addEventListener('click', () => showPage('manage'));
+document.getElementById('navSettings').addEventListener('click', () => showPage('settings'));
 
 // ---- 播放控制 ----
 document.getElementById('prevBtn').addEventListener('click', () => playPrev());
@@ -20,6 +20,10 @@ document.getElementById('volumeSlider').addEventListener('input', function() { s
 document.getElementById('playMode').addEventListener('change', async function() {
   await dbPut('setting', 'playMode', this.value);
 });
+
+// 进度条与音量滑块用原生 <input type="range"> + CSS accent-color：
+// 已播放的高亮段由浏览器按 value 自动绘制，这里不再需要维护 --progress / --volume 之类的变量，
+// 也就不会出现「拖动能变色、播放推进时不动」的不同步问题。
 
 // ---- 歌词界面 ----
 document.getElementById('coverLyricToggle').addEventListener('click', () => toggleCoverLyric());

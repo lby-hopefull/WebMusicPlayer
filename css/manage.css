@@ -1,158 +1,238 @@
-/* ========== 管理页面 - 简化版 ========== */
-#page-manage {
-  padding: 20px;
-}
+/* ========== 音乐管理页面 ========== */
+/* 这一页嵌在设置页的「音乐管理」分组里，因此不再自带页面级 padding。 */
 
+/* 操作按钮区 */
 .manage-actions {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 15px;
   align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-lg);
 }
 
 .manage-actions button {
-  padding: 8px 14px;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
 }
 
-.manage-actions button[style*="f44336"] {
-  background: #f44336;
-}
-.manage-actions button[style*="f44336"]:hover {
-  background: #d32f2f;
-}
-.manage-actions button[style*="ff9800"] {
-  background: #ff9800;
-}
-.manage-actions button[style*="ff9800"]:hover {
-  background: #f57c00;
-}
-.manage-actions button[style*="4CAF50"] {
-  background: #4CAF50;
-}
-.manage-actions button[style*="4CAF50"]:hover {
-  background: #43a047;
+/* 功能按钮类 */
+.btn-danger {
+  background: var(--color-danger);
 }
 
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-dark);
+}
+
+.btn-warning {
+  background: var(--color-warning);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: var(--color-warning-dark);
+}
+
+.btn-success {
+  background: var(--color-success);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: var(--color-success-dark);
+}
+
+/* 已选择 / 已缓存 状态条 */
 .manage-info {
-  font-size: 14px;
-  color: #666;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xl);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
 }
 
-.manage-song-list {
-  max-height: calc(100vh - 250px);
-  overflow-y: auto;
-  border: 1px solid #ddd;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
+/* ========== 歌曲列表（扁平） ========== */
+/* 列表自身不设边框、最大高度与 overflow：
+   设置页 section 已经是唯一的滚动容器，再套一层就会出现两条滚动条，
+   而且内层滚到底之后整页还在继续滚，非常难受。
+   这里只用分隔线表达「同属一个列表」。 */
+#manageSongList {
+  border-top: 1px solid var(--color-border-light);
 }
 
 .manage-song-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 15px;
-  border-bottom: 1px solid #eee;
-  transition: background 0.2s;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border-light);
+  transition: background var(--transition-base);
 }
+
 .manage-song-item:last-child {
   border-bottom: none;
 }
+
 .manage-song-item:hover {
-  background: #f9f9f9;
+  background: var(--color-bg-secondary);
 }
 
 .manage-song-item input[type="checkbox"] {
-  margin-right: 10px;
+  flex: none;
   width: 18px;
   height: 18px;
+  accent-color: var(--color-primary);
   cursor: pointer;
 }
 
+.manage-song-item input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+}
+
+/* 勾选框 · 缓存状态 · 歌名：横向一行，歌名负责占满剩余空间 */
 .manage-song-name {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
+  gap: var(--spacing-md);
 }
+
+/* 行距由 flex gap 统一控制，不再叠加外边距 */
+#manageSongList .song-meta {
+  margin-left: 0;
+}
+
 /* 歌名过长时优先截断，为右侧的元信息与删除按钮让出空间 */
 .manage-song-name label {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* 窄屏：元信息（时长·大小·日期）换到第二行，
+   否则四样东西挤在一行，歌名会被压成 0 宽 */
+@media (max-width: 575px) {
+  .manage-song-name {
+    flex-wrap: wrap;
+    row-gap: var(--spacing-xs);
+  }
+
+  .manage-song-name .song-meta {
+    flex: 1 0 100%;
+  }
 }
 
 .cache-status {
-  font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 10px;
-  margin-right: 10px;
+  flex: none;
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-medium);
 }
+
 .cache-status.cached {
-  background: #4CAF50;
+  background: var(--color-success);
   color: white;
 }
+
 .cache-status.uncached {
-  background: #ccc;
-  color: #666;
+  background: var(--color-text-disabled);
+  color: var(--color-text-secondary);
 }
 
 .manage-song-item button {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: #f44336;
-}
-.manage-song-item button:hover {
-  background: #d32f2f;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  background: var(--color-danger);
 }
 
+.manage-song-item button:hover:not(:disabled) {
+  background: var(--color-danger-dark);
+}
+
+/* ========== 导入 / 下载进度 ========== */
+/* 默认隐藏，manage.js 在批量导入或下载时才临时显示 */
 .progress-container {
-  margin-top: 15px;
-  padding: 15px;
-  background: #f0f0f0;
-  border-radius: 8px;
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
   display: none;
 }
+
 .progress-bar-container {
   width: 100%;
-  height: 20px;
-  background: #ddd;
-  border-radius: 10px;
+  height: 10px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
   overflow: hidden;
-  margin-top: 8px;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: #4CAF50;
-  width: 0%;
-  transition: width 0.3s;
+  margin-top: var(--spacing-sm);
 }
 
-/* 对话框居中显示 */
+.progress-bar-fill {
+  height: 100%;
+  background: var(--color-success);
+  width: 0%;
+  transition: width var(--transition-smooth);
+}
+
+/* ========== 选择歌曲对话框 ========== */
 #songDialog {
-  padding: 20px;
+  padding: var(--spacing-lg);
   border: none;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   max-width: 90vw;
   max-height: 80vh;
   overflow-y: auto;
   margin: auto;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
 }
+
 #songDialog::backdrop {
-  background: rgba(0,0,0,0.5);
+  background: var(--color-overlay);
 }
+
 #dialogSongList {
   max-height: 50vh;
   overflow-y: auto;
-  margin: 15px 0;
+  margin: var(--spacing-lg) 0;
 }
+
 #dialogSongList label {
   display: block;
-  padding: 8px;
+  padding: var(--spacing-sm);
   cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-base);
 }
+
 #dialogSongList label:hover {
-  background: #f5f5f5;
+  background: var(--color-bg-secondary);
+}
+
+#dialogSongList label:focus-visible {
+  outline: 2px solid var(--color-primary);
+}
+
+/* 对话框底部按钮：靠右排列 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
 }

@@ -357,6 +357,30 @@ function scrollLyricToCenter(idx) {
   });
 }
 
+// 打开歌词界面时，直接把当前正在唱的那一行摆到视口中央。
+// 不能只靠 scrollLyricToCenter：它只在「换行」时才触发，且容器刚从 display:none
+// 变为可见时高度还是 0，按它算出来的位置是错的。这里改用视口坐标求差值，
+// 与 padding、offsetTop 的换算无关；同时临时关掉 scroll-behavior，
+// 避免从顶部一路平滑滑下来。
+function alignLyricsToActive() {
+  const box = document.getElementById('lyricsContainer');
+  if (!box || !lyricRows.length) return;
+
+  let idx = activeLineIdx;
+  if (idx < 0) idx = findActiveLineIndex(currentLyrics, audio.currentTime - lyricDelay);
+  const row = lyricRows[idx >= 0 ? idx : 0];   // 尚未进入任何一行时落到第一行
+  if (!row) return;
+
+  const boxRect = box.getBoundingClientRect();
+  const rowRect = row.el.getBoundingClientRect();
+  const delta = (rowRect.top + rowRect.height / 2) - (boxRect.top + boxRect.height / 2);
+
+  const prevBehavior = box.style.scrollBehavior;
+  box.style.scrollBehavior = 'auto';
+  box.scrollTop = Math.max(0, box.scrollTop + delta);
+  box.style.scrollBehavior = prevBehavior;
+}
+
 function renderLyrics() {
   const box = document.getElementById('lyricsContainer');
   const delayControl = document.getElementById('lyricDelayControl');
@@ -609,16 +633,22 @@ audio.addEventListener('seeked', () => updateLyricHighlight());
 function toggleCoverLyric() {
   const lyrics = document.getElementById('lyricsContainer');
   const btn = document.getElementById('coverLyricToggle');
-  
-  if (lyrics.style.display === 'none' || !lyrics.style.display || lyrics.style.display === '') {
+  const label = document.getElementById('coverLyricToggleLabel');
+  const showingLyrics = lyrics.style.display === 'block';
+
+  if (!showingLyrics) {
     lyrics.style.display = 'block';
-    btn.textContent = '显示封面';
+    label.textContent = '显示封面';
+    setIcon(btn.querySelector('svg'), 'image');
     btn.setAttribute('aria-label', '切换到封面界面');
-    // 显示后立即对齐（读取 offsetTop 会触发一次强制布局，此时拿到的是真实位置）
+    // 容器变可见之后才有真实高度：先对齐当前行的高亮，再把这一行滚到视口中间
+    // （开启瞬间直接跳到位，不从第一行滑下来）
     updateLyricHighlight();
+    alignLyricsToActive();
   } else {
     lyrics.style.display = 'none';
-    btn.textContent = '显示歌词';
+    label.textContent = '显示歌词';
+    setIcon(btn.querySelector('svg'), 'file-earmark-text');
     btn.setAttribute('aria-label', '切换到歌词界面');
   }
 }

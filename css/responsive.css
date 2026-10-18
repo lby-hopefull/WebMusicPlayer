@@ -1,0 +1,252 @@
+/* ========== 响应式设计 ========== */
+/* 播放器页的两种主形态：
+   竖屏（默认）—— 封面在上、播放面板在下；
+   横屏（宽度足够）—— 封面在左、播放面板在右，面板内仍是
+   「上：标题·歌手·总时长·进度条，下：播放控制·播放模式·音量」 */
+
+/* 小屏幕 (< 576px) - 手机 */
+@media (max-width: 575px) {
+  #albumCover {
+    width: min(75vw, 300px);
+  }
+
+  .player-panel {
+    gap: var(--spacing-xl);
+  }
+
+  /* 垂直堆叠控制 */
+  .controls-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "buttons"
+      "mode"
+      "volume";
+    gap: var(--spacing-lg);
+    margin: var(--spacing-md) 0 0;
+  }
+
+  .play-mode-section,
+  .volume-section {
+    justify-self: center;
+  }
+
+  #progressSection {
+    text-align: left;
+  }
+
+  #trackInfo {
+    gap: var(--spacing-sm);
+  }
+}
+
+/* 中等屏幕 (576px - 767px) */
+@media (min-width: 576px) and (max-width: 767px) {
+  #albumCover {
+    width: min(60vw, 340px);
+  }
+
+  /* 两行布局：模式与按钮一行，音量一行 */
+  .controls-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "mode buttons"
+      "volume volume";
+    gap: var(--spacing-lg);
+  }
+
+  .volume-section {
+    justify-self: center;
+  }
+}
+
+/* 平板竖屏 (768px - 991px)：封面仍在上方 */
+@media (min-width: 768px) and (max-width: 991px) {
+  #albumCover {
+    width: min(45vw, 360px);
+  }
+
+  .controls-row {
+    grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
+    gap: var(--spacing-md);
+  }
+}
+
+/* ========== 横屏 / 宽度较大：左封面 + 右播放面板 ========== */
+@media (min-width: 992px) {
+  #player-page-cover {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-3xl);
+  }
+
+  #albumCover {
+    width: min(30vw, 380px);
+  }
+
+  /* 右栏吃掉剩余宽度：标题区不会像旧的三列布局那样被挤成窄条 */
+  .player-panel {
+    flex: 1 1 auto;
+    max-width: 720px;
+  }
+
+  .controls-row {
+    grid-template-columns: minmax(150px, 1fr) auto minmax(150px, 1fr);
+    margin: 0;
+  }
+}
+
+/* 大屏桌面 (>= 1200px)：封面再大一点，两栏更舒展 */
+@media (min-width: 1200px) {
+  #player-page-cover {
+    gap: var(--spacing-3xl);
+    max-width: 1360px;
+  }
+
+  #albumCover {
+    width: min(28vw, 420px);
+  }
+
+  .player-panel {
+    max-width: 760px;
+  }
+
+  .controls-row {
+    grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr);
+    gap: var(--spacing-xl);
+  }
+}
+
+/* 矮横屏（如手机横放 / 小窗口）：同样左右分栏，压缩纵向留白 */
+@media (orientation: landscape) and (max-height: 600px) {
+  .player-page {
+    padding: var(--spacing-md);
+  }
+
+  #player-page-cover {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xl);
+  }
+
+  #albumCover {
+    width: min(38vh, 240px);
+  }
+
+  .player-panel {
+    flex: 1 1 auto;
+    max-width: 640px;
+    gap: var(--spacing-lg);
+  }
+
+  .controls-row {
+    grid-template-columns: minmax(130px, 1fr) auto minmax(130px, 1fr);
+    gap: var(--spacing-md);
+    margin: 0;
+  }
+
+  #player-page-cover {
+    padding-bottom: var(--spacing-sm);
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .navbar,
+  .controls-row,
+  #lyricDelayControl,
+  #coverLyricToggle {
+    display: none;
+  }
+
+  body {
+    background: white;
+    color: black;
+    overflow: visible;
+    height: auto;
+  }
+
+  .page-container {
+    height: auto;
+    overflow: visible;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: more) {
+  button {
+    border: 2px solid currentColor;
+  }
+
+  input[type="range"] {
+    border: 1px solid currentColor;
+  }
+}
+
+/* 暗色模式支持（可选） */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-bg-primary: #1e1e1e;
+    --color-bg-secondary: #2d2d2d;
+    --color-bg-tertiary: #3d3d3d;
+    --color-text-primary: #e0e0e0;
+    --color-text-secondary: #b0b0b0;
+    --color-text-tertiary: #808080;
+    --color-border: #404040;
+    --color-border-light: #3a3a3a;
+    --color-track: #4f4f4f;
+    --color-primary-light: #1E3A8A;
+  }
+
+  #lyricsContainer {
+    background: var(--color-bg-primary);
+  }
+}
+
+/* 明确的深色模式主题 */
+html[data-theme="dark"] {
+  /* 让原生 range 的轨道、勾选框、下拉框按深色绘制 */
+  color-scheme: dark;
+  --color-bg-primary: #1e1e1e;
+  --color-bg-secondary: #2d2d2d;
+  --color-bg-tertiary: #3d3d3d;
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #b0b0b0;
+  --color-text-tertiary: #808080;
+  --color-border: #404040;
+  --color-border-light: #3a3a3a;
+  --color-track: #4f4f4f;
+  --color-primary-light: #1E3A8A;
+}
+
+html[data-theme="dark"] #lyricsContainer {
+  background: var(--color-bg-primary);
+}
+
+/* 浅色模式主题 */
+html[data-theme="light"] {
+  /* 与上面对称：浅色主题下原生控件也必须走浅色，否则会出现深色轨道 */
+  color-scheme: light;
+  --color-bg-primary: #fff;
+  --color-bg-secondary: #f5f5f5;
+  --color-bg-tertiary: #f0f0f0;
+  --color-text-primary: #333;
+  --color-text-secondary: #666;
+  --color-text-tertiary: #999;
+  --color-border: #ddd;
+  --color-border-light: #eee;
+  --color-track: #d2d2d2;
+  --color-primary-light: #BBDEFB;
+}
+
+/* 浅色模式下的歌词对比度改进 */
+html[data-theme="light"] .lyric-word-bg,
+html[data-theme="light"] .lyric-line {
+  color: #666;
+}
+
+html[data-theme="light"] .lyric-translate {
+  color: #999;
+}

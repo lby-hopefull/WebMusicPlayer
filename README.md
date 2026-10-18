@@ -50,8 +50,13 @@
 - **核心语言**：HTML5、JavaScript (ES6+)
 - **前端库**：
   - `jsmediatags`：读取音频文件的 ID3、MP4 等标签信息（封面、歌手、专辑）。
+  - `bootstrap-icons`（Bootstrap Icons）：所有界面图标的图形来源。上游 sprite 有 2000+ 图标，
+    本项目只保留用到的部分，内联在 `music.html` 的 sprite 块里。
 - **存储方案**：IndexedDB，直接调用浏览器原生接口。
 - **样式布局**：原生 CSS3，Flexbox 布局，不依赖第三方 UI 框架。
+- **进度条 / 音量条**：`<input type="range">` + 纯 CSS 绘制 —— 已播放段由滑块位置决定
+  （Chromium/Safari 用滑块的 `box-shadow` 铺开，Firefox 用 `::-moz-range-progress`），
+  未播放轨道用主题变量 `--color-track`，因此浅色、深色主题下都清晰可见，且无需任何 JS 同步。
 - **关键 API**：Media Session API（媒体控制）、File System Access API（本地文件夹读取）。
 
 ### 🚀 快速开始
@@ -59,8 +64,9 @@
 项目由一组静态文件构成，无需构建步骤，部署方式如下。
 
 #### 1. 直接运行
-- 将 `music.html` 拖入浏览器即可运行。
-- *若需读取本地文件夹或使用缓存功能，建议通过本地服务器访问。*
+- 直接双击 `music.html` 也能打开，界面与图标都会正常显示（图标 sprite 内联在页面里，
+  不依赖任何外部请求）。
+- *若需读取本地文件夹或使用缓存功能，必须通过本地服务器访问。*
 
 #### 2. 部署到静态服务器（推荐）
 将整个目录放置于 Nginx、Apache 或任意静态文件服务器的根目录下。
@@ -146,8 +152,14 @@ A front-end only Web Music Player, originally built for local networks and embed
 - **Core Languages**: HTML5, JavaScript (ES6+)
 - **Front-end Libraries**:
   - `jsmediatags`: Reads audio file tags such as ID3 and MP4, including cover art, artist, and album.
+  - `bootstrap-icons` (Bootstrap Icons): the source of every glyph in the UI. The upstream sprite
+    carries 2000+ icons; this project keeps only the ones it uses, inlined in `music.html`.
 - **Storage**: IndexedDB, accessed through the browser's native interfaces.
 - **Styling & Layout**: Native CSS3 with Flexbox; no third-party UI framework.
+- **Progress / Volume**: `<input type="range">` styled with pure CSS — the played portion follows the
+  thumb position (a thumb `box-shadow` on Chromium/Safari, `::-moz-range-progress` on Firefox) and the
+  unplayed track uses the `--color-track` theme token, so both light and dark themes read correctly
+  with no JS syncing at all.
 - **Key APIs**: Media Session API (media controls), File System Access API (local folder access).
 
 ### 🚀 Quick Start
@@ -155,8 +167,9 @@ A front-end only Web Music Player, originally built for local networks and embed
 The project is a set of static files and needs no build step.
 
 #### 1. Run Directly
-- Drag `music.html` into a browser to run it.
-- *To read local folders or use the caching features, serve the files over a local server.*
+- Opening `music.html` straight from disk works too: the icon sprite is inlined into the page, so no
+  external request is involved.
+- *To read local folders or use the caching features, serving over a local server is required.*
 
 #### 2. Deploy on a Static Server (Recommended)
 Place the whole directory under the root of Nginx, Apache, or any static file server.
@@ -190,6 +203,12 @@ Contributions via Issues or Pull Requests are welcome:
   Reads metadata from audio files.  
   **License**: MIT  
   **Copyright**: (c) 2008 Jacob Seidelin, (c) 2009 Opera Software ASA, (c) 2010 Joshua Kifer, (c) 2015 António Afonso
+
+- [Bootstrap Icons](https://github.com/twbs/icons)  
+  Source of the UI glyphs, trimmed to the icons in use and inlined into `music.html`.
+  To add an icon, copy the matching `<symbol>` from the upstream sprite.  
+  **License**: MIT  
+  **Copyright**: (c) 2019-2024 The Bootstrap Authors
 
 ### 📄 License
 

@@ -1,0 +1,240 @@
+/* ========== 设置页面 ========== */
+#page-settings {
+  padding: var(--spacing-2xl);
+  max-width: 1000px;
+  margin: 0 auto;
+  min-height: 100%;
+}
+
+/* 设置容器 */
+.settings-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+/* 设置分组 - 使用原生 details/summary */
+.settings-section {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  transition: box-shadow var(--transition-base);
+}
+
+.settings-section:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-section[open] {
+  box-shadow: var(--shadow-md);
+}
+
+/* 分组标题 */
+.settings-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  background: var(--color-bg-secondary);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  transition: background var(--transition-base);
+  list-style: none;
+}
+
+.settings-section-title::-webkit-details-marker {
+  display: none;
+}
+
+/* 折叠箭头：随 open 状态旋转 90°，由 SVG 图标承担，不再用文字字符 */
+.section-chevron {
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  transition: transform var(--transition-base);
+}
+
+.settings-section[open] .section-chevron {
+  transform: rotate(90deg);
+}
+
+.settings-section-title:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.section-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+/* 分组内容 */
+.settings-section-content {
+  padding: var(--spacing-xl);
+}
+
+/* 设置行 */
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-2xl);
+  padding: var(--spacing-lg) 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.settings-label-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.settings-label {
+  display: block;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-base);
+}
+
+.settings-hint {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  line-height: var(--line-height-tight);
+}
+
+.settings-control {
+  flex-shrink: 0;
+}
+
+/* 主题选择器 */
+.theme-selector {
+  display: flex;
+  gap: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-md);
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  min-width: 80px;
+  color: var(--color-text-primary);
+}
+
+.theme-option:hover {
+  background: var(--color-bg-tertiary);
+  transform: translateY(-2px);
+}
+
+.theme-option.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(91, 155, 213, 0.3);
+}
+
+.theme-option.active:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
+}
+
+.theme-option svg {
+  display: block;
+}
+
+.theme-icon {
+  font-size: 24px;
+}
+
+.theme-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* 管理页的按钮、状态条与排序条统一定义在 manage.css，
+   这里只保留设置页自己的结构样式 */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+/* 管理页的歌曲列表：扁平列表，自身不设边框、不设最大高度、不设滚动，
+   整页只有一个滚动条（由 .page-container > section 提供） */
+#manageSongList {
+  margin: 0;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  #page-settings {
+    padding: var(--spacing-lg);
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-lg);
+  }
+
+  .theme-selector {
+    width: 100%;
+  }
+
+  .theme-option {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .manage-actions button {
+    flex: 1 1 calc(50% - var(--spacing-sm));
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-section-title {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: var(--font-size-base);
+  }
+
+  .settings-section-content {
+    padding: var(--spacing-lg);
+  }
+
+  .theme-option {
+    padding: var(--spacing-sm) var(--spacing-md);
+    min-width: 60px;
+  }
+
+  .theme-icon {
+    font-size: 20px;
+  }
+
+  .manage-actions button {
+    font-size: 12px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+}

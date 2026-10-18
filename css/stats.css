@@ -1,19 +1,22 @@
 /* ========== 统计页面 ========== */
 #page-stats {
-  padding: 20px;
+  padding: var(--spacing-xl);
 }
+
 #stats {
-  background: white;
-  border-radius: 8px;
-  padding: 15px;
-  border: 1px solid #ddd;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border);
 }
+
 #stats div {
-  padding: 10px 0;
-  border-bottom: 1px solid #eee;
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--color-border-light);
   display: flex;
   justify-content: space-between;
 }
+
 #stats div:last-child {
   border-bottom: none;
 }

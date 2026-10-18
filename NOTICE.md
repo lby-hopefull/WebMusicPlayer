@@ -1,5 +1,16 @@
 This project contains the following third-party components:
 
+Bootstrap Icons
+---------------
+Copyright (c) 2019-2024 The Bootstrap Authors
+https://github.com/twbs/icons
+
+The glyphs in the inline sprite block at the top of `music.html` are taken from Bootstrap Icons
+v1.13.1 and trimmed to the icons this project actually uses.
+
+This component is provided under the MIT License.
+For more information, please visit: https://opensource.org/licenses/MIT
+
 jsmediatags
 -----------
 Copyright (c) 2008 Jacob Seidelin

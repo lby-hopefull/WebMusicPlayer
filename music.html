@@ -3,12 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#2196F3">
 <title>音乐播放器</title>
+
+<!-- 图标：全局 SVG sprite，直接内联在 body 开头的 ICONS 标记块里，
+     引用写法 <svg class="icon"><use href="#图标名"/></svg>。
+     内联而不是外链 .svg sprite：外链引用在 file:// 下会被同源策略拒绝，
+     服务器 MIME 不是 image/svg+xml 时同样会失效。
+     图形来自 Bootstrap Icons（MIT）。要加图标：从上游 sprite 复制对应的 &lt;symbol&gt;
+     追加到下面这个块即可。 -->
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/utilities.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/player.css">
 <link rel="stylesheet" href="css/lists.css">
 <link rel="stylesheet" href="css/stats.css">
 <link rel="stylesheet" href="css/manage.css">
+<link rel="stylesheet" href="css/settings.css">
+<link rel="stylesheet" href="css/responsive.css">
 
 <!-- 全部脚本加 defer：并行下载、按此处的声明顺序执行，且都等到 DOM 解析完成之后才运行。
      依赖顺序由这里显式声明，init.js 也不必再自行等待 DOMContentLoaded。 -->
@@ -23,75 +35,139 @@
 <script defer src="js/media-session.js"></script>
 <script defer src="js/lists.js"></script>
 <script defer src="js/manage.js"></script>
+<script defer src="js/theme.js"></script>
 <script defer src="js/bindings.js"></script>
 <script defer src="js/init.js"></script>
 </head>
 <body>
+
+<!-- ICONS:START -->
+<!-- Bootstrap Icons v1.13.1 · 按需裁剪 · MIT (c) The Bootstrap Authors
+       上游 https://unpkg.com/bootstrap-icons@1.13.1/bootstrap-icons.svg
+       要加图标：从上游 sprite 复制对应的 <symbol> 追加到本块即可 -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     aria-hidden="true" focusable="false"
+     style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol class="bi bi-skip-backward-fill" viewBox="0 0 16 16" id="skip-backward-fill"><path d="M.5 3.5A.5.5 0 0 0 0 4v8a.5.5 0 0 0 1 0V8.753l6.267 3.636c.54.313 1.233-.066 1.233-.697v-2.94l6.267 3.636c.54.314 1.233-.065 1.233-.696V4.308c0-.63-.693-1.01-1.233-.696L8.5 7.248v-2.94c0-.63-.692-1.01-1.233-.696L1 7.248V4a.5.5 0 0 0-.5-.5"/></symbol>
+  <symbol class="bi bi-play-fill" viewBox="0 0 16 16" id="play-fill"><path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/></symbol>
+  <symbol class="bi bi-pause-fill" viewBox="0 0 16 16" id="pause-fill"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5"/></symbol>
+  <symbol class="bi bi-skip-forward-fill" viewBox="0 0 16 16" id="skip-forward-fill"><path d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.753l-6.267 3.636c-.54.313-1.233-.066-1.233-.697v-2.94l-6.267 3.636C.693 12.703 0 12.324 0 11.693V4.308c0-.63.693-1.01 1.233-.696L7.5 7.248v-2.94c0-.63.693-1.01 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5"/></symbol>
+  <symbol class="bi bi-shuffle" viewBox="0 0 16 16" id="shuffle"><path fill-rule="evenodd" d="M0 3.5A.5.5 0 0 1 .5 3H1c2.202 0 3.827 1.24 4.874 2.418.49.552.865 1.102 1.126 1.532.26-.43.636-.98 1.126-1.532C9.173 4.24 10.798 3 13 3v1c-1.798 0-3.173 1.01-4.126 2.082A9.6 9.6 0 0 0 7.556 8a9.6 9.6 0 0 0 1.317 1.918C9.828 10.99 11.204 12 13 12v1c-2.202 0-3.827-1.24-4.874-2.418A10.6 10.6 0 0 1 7 9.05c-.26.43-.636.98-1.126 1.532C4.827 11.76 3.202 13 1 13H.5a.5.5 0 0 1 0-1H1c1.798 0 3.173-1.01 4.126-2.082A9.6 9.6 0 0 0 6.444 8a9.6 9.6 0 0 0-1.317-1.918C4.172 5.01 2.796 4 1 4H.5a.5.5 0 0 1-.5-.5"/><path d="M13 5.466V1.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192m0 9v-3.932a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384l-2.36 1.966a.25.25 0 0 1-.41-.192"/></symbol>
+  <symbol class="bi bi-grip-vertical" viewBox="0 0 16 16" id="grip-vertical"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0M7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m-3 3a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0"/></symbol>
+  <symbol class="bi bi-volume-up-fill" viewBox="0 0 16 16" id="volume-up-fill"><path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.48 5.48 0 0 1 11.025 8a5.48 5.48 0 0 1-1.61 3.89z"/><path d="M8.707 11.182A4.5 4.5 0 0 0 10.025 8a4.5 4.5 0 0 0-1.318-3.182L8 5.525A3.5 3.5 0 0 1 9.025 8 3.5 3.5 0 0 1 8 10.475zM6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06"/></symbol>
+  <symbol class="bi bi-play-circle" viewBox="0 0 16 16" id="play-circle"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445"/></symbol>
+  <symbol class="bi bi-music-note-list" viewBox="0 0 16 16" id="music-note-list"><path d="M12 13c0 1.105-1.12 2-2.5 2S7 14.105 7 13s1.12-2 2.5-2 2.5.895 2.5 2"/><path fill-rule="evenodd" d="M12 3v10h-1V3z"/><path d="M11 2.82a1 1 0 0 1 .804-.98l3-.6A1 1 0 0 1 16 2.22V4l-5 1z"/><path fill-rule="evenodd" d="M0 11.5a.5.5 0 0 1 .5-.5H4a.5.5 0 0 1 0 1H.5a.5.5 0 0 1-.5-.5m0-4A.5.5 0 0 1 .5 7H8a.5.5 0 0 1 0 1H.5a.5.5 0 0 1-.5-.5m0-4A.5.5 0 0 1 .5 3H8a.5.5 0 0 1 0 1H.5a.5.5 0 0 1-.5-.5"/></symbol>
+  <symbol class="bi bi-bar-chart-line" viewBox="0 0 16 16" id="bar-chart-line"><path d="M11 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12h.5a.5.5 0 0 1 0 1H.5a.5.5 0 0 1 0-1H1v-3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3h1V7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7h1zm1 12h2V2h-2zm-3 0V7H7v7zm-5 0v-3H2v3z"/></symbol>
+  <symbol class="bi bi-gear" viewBox="0 0 16 16" id="gear"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115z"/></symbol>
+  <symbol class="bi bi-palette" viewBox="0 0 16 16" id="palette"><path d="M8 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3m4 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M5.5 7a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/><path d="M16 8c0 3.15-1.866 2.585-3.567 2.07C11.42 9.763 10.465 9.473 10 10c-.603.683-.475 1.819-.351 2.92C9.826 14.495 9.996 16 8 16a8 8 0 1 1 8-8m-8 7c.611 0 .654-.171.655-.176.078-.146.124-.464.07-1.119-.014-.168-.037-.37-.061-.591-.052-.464-.112-1.005-.118-1.462-.01-.707.083-1.61.704-2.314.369-.417.845-.578 1.272-.618.404-.038.812.026 1.16.104.343.077.702.186 1.025.284l.028.008c.346.105.658.199.953.266.653.148.904.083.991.024C14.717 9.38 15 9.161 15 8a7 7 0 1 0-7 7"/></symbol>
+  <symbol class="bi bi-music-note-beamed" viewBox="0 0 16 16" id="music-note-beamed"><path d="M6 13c0 1.105-1.12 2-2.5 2S1 14.105 1 13s1.12-2 2.5-2 2.5.896 2.5 2m9-2c0 1.105-1.12 2-2.5 2s-2.5-.895-2.5-2 1.12-2 2.5-2 2.5.895 2.5 2"/><path fill-rule="evenodd" d="M14 11V2h1v9zM6 3v10H5V3z"/><path d="M5 2.905a1 1 0 0 1 .9-.995l8-.8a1 1 0 0 1 1.1.995V3L5 4z"/></symbol>
+  <symbol class="bi bi-chevron-right" viewBox="0 0 16 16" id="chevron-right"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/></symbol>
+  <symbol class="bi bi-sun-fill" viewBox="0 0 16 16" id="sun-fill"><path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/></symbol>
+  <symbol class="bi bi-moon-stars-fill" viewBox="0 0 16 16" id="moon-stars-fill"><path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278"/><path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.73 1.73 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.73 1.73 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.73 1.73 0 0 0 1.097-1.097zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/></symbol>
+  <symbol class="bi bi-display" viewBox="0 0 16 16" id="display"><path d="M0 4s0-2 2-2h12s2 0 2 2v6s0 2-2 2h-4q0 1 .25 1.5H11a.5.5 0 0 1 0 1H5a.5.5 0 0 1 0-1h.75Q6 13 6 12H2s-2 0-2-2zm1.398-.855a.76.76 0 0 0-.254.302A1.5 1.5 0 0 0 1 4.01V10c0 .325.078.502.145.602q.105.156.302.254a1.5 1.5 0 0 0 .538.143L2.01 11H14c.325 0 .502-.078.602-.145a.76.76 0 0 0 .254-.302 1.5 1.5 0 0 0 .143-.538L15 9.99V4c0-.325-.078-.502-.145-.602a.76.76 0 0 0-.302-.254A1.5 1.5 0 0 0 13.99 3H2c-.325 0-.502.078-.602.145"/></symbol>
+  <symbol class="bi bi-arrow-repeat" viewBox="0 0 16 16" id="arrow-repeat"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/><path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/></symbol>
+  <symbol class="bi bi-folder2-open" viewBox="0 0 16 16" id="folder2-open"><path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7z"/></symbol>
+  <symbol class="bi bi-check2-square" viewBox="0 0 16 16" id="check2-square"><path d="M3 14.5A1.5 1.5 0 0 1 1.5 13V3A1.5 1.5 0 0 1 3 1.5h8a.5.5 0 0 1 0 1H3a.5.5 0 0 0-.5.5v10a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5V8a.5.5 0 0 1 1 0v5a1.5 1.5 0 0 1-1.5 1.5z"/><path d="m8.354 10.354 7-7a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0"/></symbol>
+  <symbol class="bi bi-square" viewBox="0 0 16 16" id="square"><path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/></symbol>
+  <symbol class="bi bi-download" viewBox="0 0 16 16" id="download"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/></symbol>
+  <symbol class="bi bi-cloud-download" viewBox="0 0 16 16" id="cloud-download"><path d="M4.406 1.342A5.53 5.53 0 0 1 8 0c2.69 0 4.923 2 5.166 4.579C14.758 4.804 16 6.137 16 7.773 16 9.569 14.502 11 12.687 11H10a.5.5 0 0 1 0-1h2.688C13.979 10 15 8.988 15 7.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 2.825 10.328 1 8 1a4.53 4.53 0 0 0-2.941 1.1c-.757.652-1.153 1.438-1.153 2.055v.448l-.445.049C2.064 4.805 1 5.952 1 7.318 1 8.785 2.23 10 3.781 10H6a.5.5 0 0 1 0 1H3.781C1.708 11 0 9.366 0 7.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383"/><path d="M7.646 15.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 14.293V5.5a.5.5 0 0 0-1 0v8.793l-2.146-2.147a.5.5 0 0 0-.708.708z"/></symbol>
+  <symbol class="bi bi-trash3" viewBox="0 0 16 16" id="trash3"><path d="M6.5 1h3a.5.5 0 0 1 .5.5v1H6v-1a.5.5 0 0 1 .5-.5M11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3A1.5 1.5 0 0 0 5 1.5v1H1.5a.5.5 0 0 0 0 1h.538l.853 10.66A2 2 0 0 0 4.885 16h6.23a2 2 0 0 0 1.994-1.84l.853-10.66h.538a.5.5 0 0 0 0-1zm1.958 1-.846 10.58a1 1 0 0 1-.997.92h-6.23a1 1 0 0 1-.997-.92L3.042 3.5zm-7.487 1a.5.5 0 0 1 .528.47l.5 8.5a.5.5 0 0 1-.998.06L5 5.03a.5.5 0 0 1 .47-.53Zm5.058 0a.5.5 0 0 1 .47.53l-.5 8.5a.5.5 0 1 1-.998-.06l.5-8.5a.5.5 0 0 1 .528-.47M8 4.5a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-1 0V5a.5.5 0 0 1 .5-.5"/></symbol>
+  <symbol class="bi bi-eraser" viewBox="0 0 16 16" id="eraser"><path d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828zm2.121.707a1 1 0 0 0-1.414 0L4.16 7.547l5.293 5.293 4.633-4.633a1 1 0 0 0 0-1.414zM8.746 13.547 3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293z"/></symbol>
+  <symbol class="bi bi-file-earmark-text" viewBox="0 0 16 16" id="file-earmark-text"><path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/><path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/></symbol>
+  <symbol class="bi bi-image" viewBox="0 0 16 16" id="image"><path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/><path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z"/></symbol>
+  <symbol class="bi bi-dash-lg" viewBox="0 0 16 16" id="dash-lg"><path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8"/></symbol>
+  <symbol class="bi bi-plus-lg" viewBox="0 0 16 16" id="plus-lg"><path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/></symbol>
+</svg>
+<!-- ICONS:END -->
 
 <div class="page-container">
 
 <!-- 播放器页面 -->
 <section id="page-player" class="active">
   <div id="player-swiper">
-    <!-- 第一页：封面和控制 -->
+    <!-- 第一页：封面 + 播放面板 -->
     <div class="player-page" id="player-page-cover">
       <div id="albumCover">
         <img id="coverImage" alt="专辑封面" style="display:none;">
-        <span id="coverPlaceholder">暂无封面</span>
+        <span id="coverPlaceholder">
+          <svg class="icon" aria-hidden="true"><use href="#music-note-beamed"/></svg>
+          <span>暂无封面</span>
+        </span>
       </div>
-      
-      <div id="progressSection">
-        <div id="trackInfo">
-          <div id="trackDetails">
-            <div id="songTitle">选择歌曲播放</div>
-            <div id="songArtistAlbum"></div>
+
+      <!-- 播放面板：竖屏排在封面下方；横屏（宽度较大）排在封面右侧。
+           面板内部顺序固定为「上：标题·歌手·总时长·进度条，下：播放控制·播放模式·音量」 -->
+      <div class="player-panel">
+        <div id="progressSection">
+          <div id="trackInfo">
+            <div id="trackDetails">
+              <div id="songTitle">选择歌曲播放</div>
+              <div id="songArtistAlbum"></div>
+            </div>
+            <div id="trackProgress">00:00 / 00:00</div>
           </div>
-          <div id="trackProgress">00:00 / 00:00</div>
+          <input type="range" id="progressBar" value="0" min="0" max="100" step="0.01" aria-label="播放进度">
         </div>
-        <input type="range" id="progressBar" value="0" min="0" max="100" step="0.01" aria-label="播放进度">
-      </div>
-      
-      <!-- 调整布局：播放模式左 + 控制按钮 + 音量右 -->
-      <div class="controls-row">
-        <div class="play-mode-section">
-          <label for="playMode">播放模式：</label>
-          <select id="playMode" aria-label="播放模式">
-            <option value="sequential">顺序</option>
-            <option value="loop">单曲循环</option>
-            <option value="random" selected>随机</option>
-          </select>
-        </div>
-        <button id="prevBtn" type="button" aria-label="上一首">⏮</button>
-        <button id="playPauseBtn" type="button" aria-label="播放">▶</button>
-        <button id="nextBtn" type="button" aria-label="下一首">⏭</button>
-        <div class="volume-section">
-          <label for="volumeSlider">音量：</label>
-          <input type="range" id="volumeSlider" value="100" min="0" max="100" aria-label="音量">
-          <span id="volumeValue">100</span>
+
+        <div class="controls-row">
+          <div class="play-mode-section">
+            <label for="playMode">播放模式：</label>
+            <select id="playMode" aria-label="播放模式">
+              <option value="sequential">顺序</option>
+              <option value="loop">单曲循环</option>
+              <option value="random" selected>随机</option>
+            </select>
+          </div>
+          <div class="controls-buttons">
+            <button id="prevBtn" type="button" class="player-btn" aria-label="上一首">
+              <svg class="icon" aria-hidden="true"><use href="#skip-backward-fill"/></svg>
+            </button>
+            <button id="playPauseBtn" type="button" class="player-btn player-btn-main" aria-label="播放">
+              <svg class="icon" aria-hidden="true"><use href="#play-fill"/></svg>
+            </button>
+            <button id="nextBtn" type="button" class="player-btn" aria-label="下一首">
+              <svg class="icon" aria-hidden="true"><use href="#skip-forward-fill"/></svg>
+            </button>
+          </div>
+          <div class="volume-section">
+            <label for="volumeSlider">音量：</label>
+            <input type="range" id="volumeSlider" value="100" min="0" max="100" aria-label="音量">
+            <span id="volumeValue">100</span>
+          </div>
         </div>
       </div>
     </div>
-    
+
     <!-- 第二页：播放队列 -->
     <div class="player-page" id="player-page-queue">
       <div class="queue-header">
         <h3>当前播放队列</h3>
-        <button id="shuffleBtn" type="button">🔀 随机排序</button>
+        <button id="shuffleBtn" type="button">
+          <svg class="icon" aria-hidden="true"><use href="#shuffle"/></svg>
+          随机排序
+        </button>
       </div>
       <div id="playlist"></div>
     </div>
   </div>
-  
+
   <!-- 歌词界面 -->
   <div id="lyricsContainer">
     <div id="lyricDelayControl">
       <span>歌词延迟：</span>
-      <button id="lyricDelayMinus" type="button" aria-label="歌词延迟减少 0.05 秒">-</button>
+      <button id="lyricDelayMinus" type="button" aria-label="歌词延迟减少 0.05 秒">
+        <svg class="icon" aria-hidden="true"><use href="#dash-lg"/></svg>
+      </button>
       <span id="lyricDelayValue">0.00s</span>
-      <button id="lyricDelayPlus" type="button" aria-label="歌词延迟增加 0.05 秒">+</button>
+      <button id="lyricDelayPlus" type="button" aria-label="歌词延迟增加 0.05 秒">
+        <svg class="icon" aria-hidden="true"><use href="#plus-lg"/></svg>
+      </button>
     </div>
   </div>
-  <button id="coverLyricToggle" type="button" aria-label="切换到歌词界面">显示歌词</button>
+  <button id="coverLyricToggle" type="button" aria-label="切换到歌词界面">
+    <svg class="icon" aria-hidden="true"><use href="#file-earmark-text"/></svg>
+    <span id="coverLyricToggleLabel">显示歌词</span>
+  </button>
 </section>
 
 <!-- 歌曲列表页面 -->
@@ -110,8 +186,8 @@
       <option value="desc">降序</option>
     </select>
   </div>
-  <div style="display:flex; gap:10px; margin-bottom:15px;">
-    <input id="newListName" placeholder="新歌单名" aria-label="新歌单名称" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
+  <div class="new-list-row">
+    <input id="newListName" placeholder="新歌单名" aria-label="新歌单名称">
     <button id="createListBtn" type="button">创建</button>
   </div>
   <div id="customLists"></div>
@@ -123,44 +199,117 @@
   <div id="stats"></div>
 </section>
 
-<!-- 管理页面 - 简化版 -->
-<section id="page-manage">
-  <h3>音乐管理</h3>
-  <div class="manage-actions">
-    <button id="refreshListBtn" type="button">刷新列表</button>
-    <button id="addFolderBtn" type="button" style="background:#4CAF50;">📁 添加本地文件夹</button>
-    <input type="file" id="localFolderInput" webkitdirectory directory multiple style="display:none;">
-    <button id="selectAllBtn" type="button">全选</button>
-    <button id="deselectAllBtn" type="button">取消全选</button>
-    <button id="downloadSelectedBtn" type="button">下载选中</button>
-    <button id="downloadAllBtn" type="button">下载全部</button>
-    <button id="deleteSelectedBtn" type="button" style="background:#f44336;">删除选中</button>
-    <button id="clearCacheBtn" type="button" style="background:#ff9800;">清除缓存</button>
+<!-- 设置页面 -->
+<section id="page-settings">
+  <div class="settings-container">
+    <!-- 通用设置：所有分组默认折叠，避免一进设置页就铺满屏幕 -->
+    <details class="settings-section">
+      <summary class="settings-section-title">
+        <svg class="icon section-icon" aria-hidden="true"><use href="#palette"/></svg>
+        <span>外观</span>
+        <svg class="icon section-chevron" aria-hidden="true"><use href="#chevron-right"/></svg>
+      </summary>
+      <div class="settings-section-content">
+        <div class="settings-row">
+          <div class="settings-label-group">
+            <label for="themeMode" class="settings-label">主题模式</label>
+            <span class="settings-hint">选择你偏好的配色方案</span>
+          </div>
+          <div class="settings-control">
+            <div class="theme-selector">
+              <button type="button" class="theme-option" data-theme="light" aria-label="浅色主题">
+                <svg class="icon theme-icon" aria-hidden="true"><use href="#sun-fill"/></svg>
+                <span class="theme-name">浅色</span>
+              </button>
+              <button type="button" class="theme-option" data-theme="dark" aria-label="深色主题">
+                <svg class="icon theme-icon" aria-hidden="true"><use href="#moon-stars-fill"/></svg>
+                <span class="theme-name">深色</span>
+              </button>
+              <button type="button" class="theme-option active" data-theme="system" aria-label="跟随系统">
+                <svg class="icon theme-icon" aria-hidden="true"><use href="#display"/></svg>
+                <span class="theme-name">自动</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- 音乐管理 -->
+    <details class="settings-section">
+      <summary class="settings-section-title">
+        <svg class="icon section-icon" aria-hidden="true"><use href="#music-note-beamed"/></svg>
+        <span>音乐管理</span>
+        <svg class="icon section-chevron" aria-hidden="true"><use href="#chevron-right"/></svg>
+      </summary>
+      <div class="settings-section-content">
+        <div class="manage-actions">
+          <button id="refreshListBtn" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#arrow-repeat"/></svg>
+            刷新
+          </button>
+          <button id="addFolderBtn" type="button" class="btn-success">
+            <svg class="icon" aria-hidden="true"><use href="#folder2-open"/></svg>
+            添加文件夹
+          </button>
+          <input type="file" id="localFolderInput" webkitdirectory directory multiple style="display:none;">
+          <button id="selectAllBtn" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#check2-square"/></svg>
+            全选
+          </button>
+          <button id="deselectAllBtn" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#square"/></svg>
+            取消全选
+          </button>
+          <button id="downloadSelectedBtn" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#download"/></svg>
+            下载选中
+          </button>
+          <button id="downloadAllBtn" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#cloud-download"/></svg>
+            全部下载
+          </button>
+          <button id="deleteSelectedBtn" type="button" class="btn-danger">
+            <svg class="icon" aria-hidden="true"><use href="#trash3"/></svg>
+            删除
+          </button>
+          <button id="clearCacheBtn" type="button" class="btn-warning">
+            <svg class="icon" aria-hidden="true"><use href="#eraser"/></svg>
+            清理缓存
+          </button>
+        </div>
+
+        <div class="manage-info">
+          <span id="selectedCount">已选择： 0</span>
+          <span id="cachedCount">已缓存： 0</span>
+        </div>
+
+        <div class="sort-bar">
+          <label for="manageSortKey">排序：</label>
+          <select id="manageSortKey" aria-label="管理列表排序方式">
+            <option value="name">名称</option>
+            <option value="duration">时长</option>
+            <option value="addedTime">添加时间</option>
+            <option value="size">大小</option>
+          </select>
+          <select id="manageSortDir" aria-label="管理列表排序方向">
+            <option value="asc">升序</option>
+            <option value="desc">降序</option>
+          </select>
+        </div>
+
+        <div class="progress-container" id="progressContainer" style="display: none;">
+          <div id="progressText">进度： 0/0</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+          </div>
+        </div>
+
+        <!-- 扁平歌曲列表：自身没有边框和滚动，跟着设置页整页滚动，不会出现第二条滚动条 -->
+        <div id="manageSongList"></div>
+      </div>
+    </details>
   </div>
-  <div class="manage-info">
-    <span id="selectedCount">已选择： 0</span>
-    <span style="margin-left:20px;" id="cachedCount">已缓存： 0</span>
-  </div>
-  <div class="sort-bar">
-    <label for="manageSortKey">排序：</label>
-    <select id="manageSortKey" aria-label="管理列表排序方式">
-      <option value="name">名称</option>
-      <option value="duration">歌曲时长</option>
-      <option value="addedTime">添加时间</option>
-      <option value="size">文件大小</option>
-    </select>
-    <select id="manageSortDir" aria-label="管理列表排序方向">
-      <option value="asc">升序</option>
-      <option value="desc">降序</option>
-    </select>
-  </div>
-  <div class="progress-container" id="progressContainer">
-    <div id="progressText">进度： 0/0</div>
-    <div class="progress-bar-container">
-      <div class="progress-bar-fill" id="progressBarFill"></div>
-    </div>
-  </div>
-  <div class="manage-song-list" id="manageSongList"></div>
 </section>
 
 </div>
@@ -168,17 +317,29 @@
 <dialog id="songDialog">
   <h3>选择要添加的歌曲</h3>
   <div id="dialogSongList"></div>
-  <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
+  <div class="dialog-footer">
     <button id="confirmAddSongsBtn" type="button">确认</button>
-    <button id="cancelAddSongsBtn" type="button" style="background:#666;">取消</button>
+    <button id="cancelAddSongsBtn" type="button" class="dialog-btn-cancel">取消</button>
   </div>
 </dialog>
 
 <div class="navbar">
-  <button id="navPlayer" type="button">播放器</button>
-  <button id="navLists" type="button">歌曲列表</button>
-  <button id="navStats" type="button">统计</button>
-  <button id="navManage" type="button">管理</button>
+  <button id="navPlayer" type="button">
+    <svg class="icon" aria-hidden="true"><use href="#play-circle"/></svg>
+    <span>播放器</span>
+  </button>
+  <button id="navLists" type="button">
+    <svg class="icon" aria-hidden="true"><use href="#music-note-list"/></svg>
+    <span>歌曲列表</span>
+  </button>
+  <button id="navStats" type="button">
+    <svg class="icon" aria-hidden="true"><use href="#bar-chart-line"/></svg>
+    <span>统计</span>
+  </button>
+  <button id="navSettings" type="button">
+    <svg class="icon" aria-hidden="true"><use href="#gear"/></svg>
+    <span>设置</span>
+  </button>
 </div>
 
 </body>

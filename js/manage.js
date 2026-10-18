@@ -59,8 +59,6 @@ async function renderManageList() {
 
     const label = document.createElement('label');
     label.htmlFor = `song_${idx}`;
-    label.style.cursor = 'pointer';
-    label.style.flex = '1';
     label.textContent = song;
 
     nameWrap.append(checkbox, status, label);
@@ -76,7 +74,9 @@ async function renderManageList() {
     if (isCached) {
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
-      delBtn.textContent = '删除';
+      const delText = document.createElement('span');
+      delText.textContent = '删除';
+      delBtn.append(iconEl('trash3'), delText);
       delBtn.setAttribute('aria-label', `删除 ${song} 的缓存`);
       delBtn.addEventListener('click', () => deleteSingleCache(song));
       item.appendChild(delBtn);

@@ -1,0 +1,107 @@
+/* ========== 设计系统：CSS 变量定义 ========== */
+/* 此文件应首先加载，为整个应用提供统一的设计令牌 */
+
+:root {
+  /* 原生控件（滑块轨道与滑块、勾选框、下拉框、滚动条）的配色由浏览器按
+     color-scheme 决定。这里给出默认值，具体主题在 responsive.css 里各自声明，
+     否则会出现「应用是浅色、控件却按系统深色绘制」的错配 */
+  color-scheme: light;
+
+  /* ========== 色彩系统 ========== */
+  /* 主色系 - 高饱和度 */
+  --color-primary: #2196F3;
+  --color-primary-dark: #1976D2;
+  --color-primary-light: #BBDEFB;
+
+  /* 功能色 - 高饱和度 */
+  --color-success: #4CAF50;
+  --color-success-dark: #43a047;
+  --color-warning: #ff9800;
+  --color-warning-dark: #f57c00;
+  --color-danger: #f44336;
+  --color-danger-dark: #d32f2f;
+
+  /* 中性色 */
+  --color-text-primary: #333;
+  --color-text-secondary: #666;
+  --color-text-tertiary: #999;
+  --color-text-disabled: #ccc;
+
+  --color-bg-primary: #fff;
+  --color-bg-secondary: #f5f5f5;
+  --color-bg-tertiary: #f0f0f0;
+  --color-border: #ddd;
+  --color-border-light: #eee;
+  /* 进度条 / 音量条的未播放轨道：比边框稍深，保证在浅色背景下也看得见 */
+  --color-track: #d2d2d2;
+
+  /* 状态色 */
+  --color-backdrop: rgba(0, 0, 0, 0.45);
+  --color-overlay: rgba(0, 0, 0, 0.5);
+
+  /* ========== 间距系统（8px 基准） ========== */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 30px;
+  --spacing-3xl: 40px;
+
+  /* ========== 圆角系统 ========== */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 20px;
+
+  /* ========== 阴影系统 ========== */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 6px 28px rgba(0, 0, 0, 0.28);
+
+  /* ========== 排版系统 ========== */
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono: 'Monaco', 'Menlo', monospace;
+
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  --line-height-tight: 1.4;
+  --line-height-normal: 1.6;
+  --line-height-relaxed: 1.8;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* ========== 过渡系统 ========== */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ========== 布局常量 ========== */
+  --navbar-height: 50px;
+  --navbar-z-index: 100;
+  --dialog-z-index: 200;
+
+  /* ========== 响应式断点 ========== */
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+}
+
+/* 减弱动画用户偏好支持 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0s;
+    --transition-base: 0s;
+    --transition-slow: 0s;
+    --transition-smooth: 0s;
+  }
+}
