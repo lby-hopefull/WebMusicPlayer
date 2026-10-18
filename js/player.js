@@ -118,7 +118,10 @@ async function playPrev(){
 
 audio.addEventListener('timeupdate',()=>{
   if(audio.duration){
-    document.getElementById('progressBar').value=(audio.currentTime/audio.duration)*100;
+    const progressBar = document.getElementById('progressBar');
+    progressBar.value=(audio.currentTime/audio.duration)*100;
+    // 高亮段宽度来自 --fill-ratio，程序改动 value 后必须显式同步这一下
+    syncRangeFill(progressBar);
     document.getElementById('trackProgress').textContent=format(audio.currentTime)+'/'+format(audio.duration);
     // 歌词高亮交由 requestAnimationFrame 驱动（见 lyrics.js）；timeupdate 频率仅约 4Hz，不足以支撑逐字动画
     updateMediaSessionPositionState(); 

@@ -25,7 +25,8 @@
   justify-content: safe center;
   gap: var(--spacing-2xl);
   width: 100%;
-  max-width: 1200px;
+  /* 宽屏上限：与其它页面同样居中，但放宽一档以容纳封面 + 播放面板两栏 */
+  max-width: var(--page-max-width-wide);
   margin: 0 auto;
   padding-bottom: var(--spacing-xl);
 }
@@ -81,16 +82,10 @@
 }
 
 #trackInfo {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   margin-bottom: var(--spacing-md);
-  gap: var(--spacing-lg);
-  flex-wrap: wrap;
 }
 
 #trackDetails {
-  flex: 1;
   min-width: 0;
 }
 
@@ -102,86 +97,100 @@
   white-space: normal;
 }
 
-#songArtistAlbum {
-  font-size: 0.95em;
-  color: var(--color-text-secondary);
+/* 歌手 + 播放时间：同一行，基线对齐；时间贴右边，歌手过长时省略 */
+#trackSub {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-md);
   margin-top: var(--spacing-xs);
 }
 
+#songArtistAlbum {
+  /* 与右侧的播放时间、下方的播放模式、音量同属「辅助正文」，统一用 --font-size-sm */
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 #trackProgress {
+  flex: none;
   white-space: nowrap;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-  padding-top: var(--spacing-xs);
 }
 
 /* ========== 进度条与音量条 ========== */
-/* 两个要求同时成立：
-   1) 已播放（高亮）段必须由浏览器按 value 自行绘制 —— 零 JS 同步，不会错位；
-   2) 「未播放」的轨道颜色要跟着主题走 —— 浅色主题下不能留一条深色轨道。
-   accent-color 只能管「已填充段 + 滑块」，未填充段用的是浏览器内部配色且无法被
-   CSS 覆盖，所以这里改用纯 CSS 的通用写法（依然不写一行 JS）：
-     · Chromium / Safari —— 轨道用主题色，滑块用巨大 box-shadow 向左铺出填充段；
-       阴影位置由滑块决定，也就是永远等于当前 value；
-     · Firefox —— 直接用原生的 ::-moz-range-progress 绘制填充。
-   外层 <input> 用透明上下边框撑出 22px 的可点区域，overflow:hidden 只裁切
-   10px 的内容区，因此点击热区够大、填充段仍然只有 10px 高。 */
+/* 两条约束：
+   1) 已播放段与未播放段必须由**同一个元素**绘制 —— 否则两条绘制路径在非整数
+      缩放/DPR 下各自取整，会出现「高亮段比轨道粗一点/细一点」；
+   2) 已播放段的右边界必须落在**滑块中心**，不能越过它 —— 滑块是圆的，上下两端
+      很窄，边界越过后圆角外侧就会漏出蓝色。
+   于是：轨道伪元素用 background-color 画未播放段、background-image 渐变画已播放段，
+   两者同高同圆角；宽度不用「轨道宽度 × 比例」，而是按滑块的坐标系换算：
+     滑块中心 = r + (W − 2r) × v      （Chromium 把滑块约束在轨道内，r 为滑块半径）
+   若直接用 W × v，v > 50% 时填充边界会跑到滑块中心右侧（v=80% 时约 3px），
+   正是圆角外漏蓝色的成因。--fill-ratio 是 0~1 的无量纲值，由 syncRangeFill() 写入。
+   另外 --range-thickness 同时决定轨道粗细与滑块直径，两者永远相等。 */
 input[type="range"] {
+  --range-thickness: 10px;
+  --range-thumb: var(--range-thickness);      /* 滑块直径 = 轨道粗细 */
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 22px;
-  padding: 0;
-  border: 6px solid transparent;   /* 只提供热区，不参与绘制 */
-  /* 外圆角 = 透明边框 6px + 内容圆角 5px：overflow 的裁切按内圆角生效，
-     这样填充段（滑块的阴影）两端也带圆角，而不是被切成方头 */
-  border-radius: 11px;
+  height: 20px;                               /* 点击热区，比轨道高 */
+  /* 两端各留半个滑块：滑块走到 0% / 100% 时不会越出控件边界 */
+  padding: 0 calc(var(--range-thumb) / 2);
   margin: 0;
+  border: 0;
   background: transparent;
   cursor: pointer;
-  overflow: hidden;                 /* 裁掉滑块向左铺出的填充阴影 */
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
-  height: 10px;
-  border-radius: 5px;
-  background: var(--color-track);
+  height: var(--range-thickness);
+  border-radius: calc(var(--range-thickness) / 2);
+  /* 下层：未播放轨道；上层：已播放段，右边界与滑块中心对齐 */
+  background-color: var(--color-track);
+  background-image: linear-gradient(var(--color-primary), var(--color-primary));
+  background-repeat: no-repeat;
+  background-size:
+    calc(var(--range-thumb) / 2 + (100% - var(--range-thumb)) * var(--fill-ratio, 0)) 100%;
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 10px;
-  height: 10px;
+  width: var(--range-thumb);
+  height: var(--range-thumb);
   border-radius: 50%;
-  /* 白色滑块：深色主题下若用 --color-bg-primary 会变成一颗黑点 */
+  /* 白色滑块：深色主题下若用 --color-bg-primary 会变成一颗黑点；
+     内描边让白点在浅色主题的浅灰轨道上也立得住 */
   background: var(--color-slider-thumb);
-  /* 第一个阴影：向左铺出的实心色块 = 已播放段，位置由滑块决定，永远等于当前 value。
-     水平偏移比铺开半径再多半个滑块宽（-100vw - 5px），使填充的右边界停在滑块
-     *中心线* 而不是右缘：滑块是圆形，上下两端很窄，若边界落在右缘，圆角外侧就会
-     漏出蓝色（看起来像圆角被方角填满）。落到中心线后每一行的蓝色都被滑块盖住。
-     第二个阴影是内描边，让白点在浅色主题的浅灰轨道上也立得住。 */
-  box-shadow: calc(-100vw - 5px) 0 0 100vw var(--color-primary),
-              inset 0 0 0 1.5px var(--color-primary);
+  box-shadow: inset 0 0 0 1.5px var(--color-primary);
 }
 
-/* Firefox：轨道 + 原生进度填充 */
+/* Firefox：轨道 + 原生进度填充（两者同属一个元素族，粗细不会不一致） */
 input[type="range"]::-moz-range-track {
-  height: 10px;
-  border-radius: 5px;
+  height: var(--range-thickness);
+  border-radius: calc(var(--range-thickness) / 2);
   background: var(--color-track);
 }
 
 input[type="range"]::-moz-range-progress {
-  height: 10px;
-  border-radius: 5px;
+  height: var(--range-thickness);
+  border-radius: calc(var(--range-thickness) / 2);
   background: var(--color-primary);
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
+  /* 带描边的滑块要用 border-box，否则直径会比轨道粗 3px */
+  box-sizing: border-box;
+  width: var(--range-thumb);
+  height: var(--range-thumb);
   border: 1.5px solid var(--color-primary);
   border-radius: 50%;
   background: var(--color-slider-thumb);
@@ -193,8 +202,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #volumeSlider {
-  width: 110px;
-  flex: none;
+  /* 基础宽度 110px；文字放大后三列控制条在 ~1000px 视口会偏紧，
+     这里允许收缩，避免把音量数字挤出面板 */
+  flex: 0 1 110px;
+  min-width: 84px;
 }
 
 /* ========== 播放控制区 ========== */
@@ -271,6 +282,7 @@ input[type="range"]::-moz-range-thumb {
   gap: var(--spacing-md);
   justify-self: end;
   flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .play-mode-section label,
@@ -291,6 +303,10 @@ input[type="range"]::-moz-range-thumb {
 /* 第二页：播放队列 */
 #player-page-queue {
   padding-top: var(--spacing-2xl);
+  /* 与封面页同一条宽度上限，宽屏下居中显示 */
+  width: 100%;
+  max-width: var(--page-max-width-wide);
+  margin: 0 auto;
 }
 
 .queue-header {
@@ -486,7 +502,8 @@ input[type="range"]::-moz-range-thumb {
 :root {
   --lyric-font-size: var(--font-size-2xl);
   --lyric-line-height: 1.4;
-  --lyric-translate-font-size: 20px;
+  /* 译文行：约为主歌词的 0.8 倍，随字号阶梯一起放大 */
+  --lyric-translate-font-size: 22px;
 }
 
 .lyric-line-container {

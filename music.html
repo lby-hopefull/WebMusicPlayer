@@ -102,9 +102,12 @@
           <div id="trackInfo">
             <div id="trackDetails">
               <div id="songTitle">选择歌曲播放</div>
-              <div id="songArtistAlbum"></div>
+              <!-- 歌手与播放时间同处一行：左侧歌手（过长省略号），右侧时间贴边 -->
+              <div id="trackSub">
+                <span id="songArtistAlbum"></span>
+                <span id="trackProgress">00:00 / 00:00</span>
+              </div>
             </div>
-            <div id="trackProgress">00:00 / 00:00</div>
           </div>
           <input type="range" id="progressBar" value="0" min="0" max="100" step="0.01" aria-label="播放进度">
         </div>
@@ -131,7 +134,9 @@
           </div>
           <div class="volume-section">
             <label for="volumeSlider">音量：</label>
-            <input type="range" id="volumeSlider" value="100" min="0" max="100" aria-label="音量">
+            <!-- --fill-ratio 是已播放/已调整比例的初始值（0~1），与 value 保持一致：
+                 JS 起来之前先按这个静态值画，避免首帧显示 0% 再跳变 -->
+            <input type="range" id="volumeSlider" value="100" min="0" max="100" aria-label="音量" style="--fill-ratio: 1">
             <span id="volumeValue">100</span>
           </div>
         </div>

@@ -34,7 +34,8 @@
     text-align: left;
   }
 
-  #trackInfo {
+  /* 手机上歌手与时间之间留白收紧，避免时间被挤到第二行 */
+  #trackSub {
     gap: var(--spacing-sm);
   }
 }
@@ -100,7 +101,8 @@
 @media (min-width: 1200px) {
   #player-page-cover {
     gap: var(--spacing-3xl);
-    max-width: 1360px;
+    /* 宽度上限统一由 --page-max-width-wide 控制，这里不再单独放宽 */
+    max-width: var(--page-max-width-wide);
   }
 
   #albumCover {

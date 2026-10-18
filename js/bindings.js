@@ -21,9 +21,12 @@ document.getElementById('playMode').addEventListener('change', async function() 
   await dbPut('setting', 'playMode', this.value);
 });
 
-// 进度条与音量滑块用原生 <input type="range"> + CSS accent-color：
-// 已播放的高亮段由浏览器按 value 自动绘制，这里不再需要维护 --progress / --volume 之类的变量，
-// 也就不会出现「拖动能变色、播放推进时不动」的不同步问题。
+// 两条 range 的高亮比例统一在这里同步：任何 range 的 input 事件都会走到，
+// 不必为新增的滑块单独接线（值被程序改动时由对应调用点自己调用 syncRangeFill）
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t && t.matches && t.matches('input[type="range"]')) syncRangeFill(t);
+});
 
 // ---- 歌词界面 ----
 document.getElementById('coverLyricToggle').addEventListener('click', () => toggleCoverLyric());

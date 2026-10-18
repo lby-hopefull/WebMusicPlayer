@@ -1,6 +1,9 @@
 /* ========== 歌曲列表页面 ========== */
 #page-lists {
   padding: var(--spacing-xl);
+  /* 与设置页同一条宽度上限，宽屏下居中显示 */
+  max-width: var(--page-max-width);
+  margin: 0 auto;
 }
 
 /* 新建歌单：输入框 + 创建按钮 */

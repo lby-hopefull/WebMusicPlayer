@@ -41,3 +41,26 @@ function iconEl(name, extraClass) {
   return svg;
 }
 
+// ========== 进度条 / 音量条的高亮比例 ==========
+// 两条 range 的「已播放段」画在轨道自己的背景渐变上（原因见 css/player.css），
+// 宽度由 CSS 变量 --fill-ratio（0~1 的无量纲值）换算得出。
+// 因此 value 每次变化都要同步一次：
+//   拖动滑块 —— bindings.js 里的 input 事件统一处理；
+//   播放推进 —— player.js 的 timeupdate 里调用（旧实现漏了这一处，
+//               表现为「拖动能变色、播放时不跟着走」）；
+//   恢复进度 —— init.js 启动时统一同步一次。
+// 之所以传比例而不是百分比：轨道宽度的百分比并不等于滑块中心的位置
+// （滑块中心 = r + (W − 2r)·v），换算交给 CSS 里的 calc 完成。
+function syncRangeFill(el) {
+  if (!el) return;
+  const min = Number(el.min || 0);
+  const max = Number(el.max || 100);
+  const raw = max > min ? (Number(el.value) - min) / (max - min) : 0;
+  const ratio = Math.max(0, Math.min(1, raw));
+  el.style.setProperty('--fill-ratio', String(Math.round(ratio * 10000) / 10000));
+}
+
+function syncAllRangeFills() {
+  document.querySelectorAll('input[type="range"]').forEach(syncRangeFill);
+}
+

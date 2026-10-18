@@ -72,12 +72,20 @@
   --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-family-mono: 'Monaco', 'Menlo', monospace;
 
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-base: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 20px;
-  --font-size-2xl: 24px;
+  /* 字号阶梯：整体较前一版放大一档。
+     用途约定 ——
+       xs   次要元信息（时长·大小·日期、缓存徽标、导航文字）
+       sm   辅助正文（歌手、播放时间、播放模式、音量、按钮、提示）
+       base 正文（列表行、设置项、统计行）
+       lg   小标题（分组标题、队列标题）
+       xl   歌曲标题
+       2xl  歌词正文（--lyric-font-size 引用） */
+  --font-size-xs: 13px;
+  --font-size-sm: 16px;
+  --font-size-base: 17px;
+  --font-size-lg: 20px;
+  --font-size-xl: 23px;
+  --font-size-2xl: 27px;
 
   --line-height-tight: 1.4;
   --line-height-normal: 1.6;
@@ -97,6 +105,12 @@
   --navbar-height: 50px;
   --navbar-z-index: 100;
   --dialog-z-index: 200;
+  /* 各页面内容的显示宽度上限（居中）：宽屏下列表、统计、设置页保持同一条
+     "阅读宽度"，不会一路拉到屏幕两侧 */
+  --page-max-width: 1000px;
+  /* 播放器页放宽一档：它要并排放封面与播放面板，面板里的三列控制条
+     （播放模式 / 三个按钮 / 音量）本身就占约 600px，1000px 会挤到溢出 */
+  --page-max-width-wide: 1240px;
 
   /* ========== 响应式断点 ========== */
   --breakpoint-sm: 576px;

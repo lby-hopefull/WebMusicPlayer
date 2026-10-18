@@ -1,6 +1,9 @@
 /* ========== 统计页面 ========== */
 #page-stats {
   padding: var(--spacing-xl);
+  /* 与设置页同一条宽度上限，宽屏下居中显示 */
+  max-width: var(--page-max-width);
+  margin: 0 auto;
 }
 
 #stats {

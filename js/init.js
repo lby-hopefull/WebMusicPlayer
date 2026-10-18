@@ -10,6 +10,8 @@
   }
   const volumeValue=document.getElementById('volumeValue');
   if(volumeValue) volumeValue.textContent=Math.round(document.getElementById('volumeSlider').value);
+  // 启动时统一同步一次高亮比例（进度条此刻是 0%，音量是刚恢复的值）
+  syncAllRangeFills();
   // 加载播放模式
   const playModeSetting = await dbGet('setting', 'playMode');
   if(playModeSetting && playModeSetting.data) {

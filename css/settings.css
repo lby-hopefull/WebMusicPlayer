@@ -1,7 +1,8 @@
 /* ========== 设置页面 ========== */
 #page-settings {
   padding: var(--spacing-2xl);
-  max-width: 1000px;
+  /* 其余页面沿用同一条宽度上限（--page-max-width） */
+  max-width: var(--page-max-width);
   margin: 0 auto;
   min-height: 100%;
 }
@@ -234,7 +235,8 @@
   }
 
   .manage-actions button {
-    font-size: 12px;
+    /* 窄屏也走同一套字号阶梯，不再写死 12px */
+    font-size: var(--font-size-xs);
     padding: var(--spacing-xs) var(--spacing-sm);
   }
 }
