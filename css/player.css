@@ -453,6 +453,15 @@ input[type="range"]::-moz-range-thumb {
   body.lyrics-open #lyricsContainer {
     bottom: 0;
   }
+
+  /* 竖屏打开歌词时隐藏被遮挡的元素和底部胶囊 */
+  #page-player.lyrics-on #albumCover,
+  #page-player.lyrics-on #progressSection,
+  #page-player.lyrics-on .controls-row,
+  #page-player.lyrics-on #player-page-queue,
+  body.lyrics-open .navbar {
+    display: none;
+  }
 }
 
 #coverLyricToggle {
