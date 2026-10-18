@@ -1,5 +1,26 @@
 // ========== 页面切换函数 ==========
 // 导航按钮的 id 与页码一一对应，当前页对应的按钮加 .active（容器与文字分别高亮）
+
+// 防抖渲染函数
+let renderManageListTimer = null;
+let renderListsTimer = null;
+let renderStatsTimer = null;
+
+function debouncedRenderManageList() {
+  if (renderManageListTimer) clearTimeout(renderManageListTimer);
+  renderManageListTimer = setTimeout(() => renderManageList(), 150);
+}
+
+function debouncedRenderLists() {
+  if (renderListsTimer) clearTimeout(renderListsTimer);
+  renderListsTimer = setTimeout(() => renderLists(), 150);
+}
+
+function debouncedRenderStats() {
+  if (renderStatsTimer) clearTimeout(renderStatsTimer);
+  renderStatsTimer = setTimeout(() => renderStats(), 150);
+}
+
 function showPage(pageName) {
   document.querySelectorAll('.page-container > section').forEach(sec => {
     sec.classList.remove('active');
@@ -12,11 +33,16 @@ function showPage(pageName) {
   });
 
   if(pageName === 'manage') {
-    renderManageList();
+    debouncedRenderManageList();
   } else if(pageName === 'lists') {
-    renderLists();
+    debouncedRenderLists();
   } else if(pageName === 'stats') {
-    renderStats();
+    // 使用 requestIdleCallback 在空闲时渲染
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => renderStats());
+    } else {
+      debouncedRenderStats();
+    }
   }
 }
 

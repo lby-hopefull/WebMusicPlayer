@@ -1,4 +1,25 @@
 // ========== 播放控制 ==========
+// 音频预加载：提前缓存下一首，减少切歌等待
+let preloadedNext = null;
+
+async function preloadNextSong() {
+  const nextIdx = (currentTrack + 1) % currentQueue.length;
+  const nextSong = currentQueue[nextIdx];
+  if (!nextSong || await getMusic(nextSong)) return;
+
+  // 后台静默缓存，不阻塞当前播放
+  preloadedNext = nextSong;
+  fetch('/music_play?file=' + encodeURIComponent(nextSong))
+    .then(r => r.arrayBuffer())
+    .then(b => {
+      if (preloadedNext === nextSong) {
+        saveMusic(nextSong, b);
+        recordSongMeta(nextSong, { size: b.byteLength, blob: new Blob([b], {type:'audio/mpeg'}) });
+      }
+    })
+    .catch(err => console.warn('预加载失败：', err));
+}
+
 async function playTrack(i){
   if(i<0||i>=currentQueue.length) return;
   // 防重入：两次切换并发时只让最新的一次生效
@@ -40,7 +61,10 @@ async function playTrack(i){
   // play() 返回 promise，此处捕获 AbortError 等中断，避免影响自动切歌
   audio.play().catch(err=>{ console.warn('play() 被中断：', err.name); });
   isPlaying=true;updateBtn();highlight();
-  
+
+  // 预加载下一首
+  preloadNextSong();
+
   // 恢复上次播放进度（如果是同一首歌）
   const lastProgress = await dbGet('currentList', 'lastProgress');
   if(lastProgress && lastProgress.data && lastProgress.data.song === name) {
@@ -65,7 +89,7 @@ function togglePlayPause(){
 }
 
 function updateBtn(){
-  const btn=document.getElementById('playPauseBtn');
+  const btn = domCache.playPauseBtn || document.getElementById('playPauseBtn');
   // 图标取自全局 sprite：播放与暂停只是换 <use> 的指向，不动按钮的其他结构
   setIcon(btn.querySelector('svg'), isPlaying?'pause-fill':'play-fill');
   // 按钮内容只有在变化时才需要同步无障碍名
@@ -118,13 +142,14 @@ async function playPrev(){
 
 audio.addEventListener('timeupdate',()=>{
   if(audio.duration){
-    const progressBar = document.getElementById('progressBar');
+    const progressBar = domCache.progressBar || document.getElementById('progressBar');
     progressBar.value=(audio.currentTime/audio.duration)*100;
     // 高亮段宽度来自 --fill-ratio，程序改动 value 后必须显式同步这一下
     syncRangeFill(progressBar);
-    document.getElementById('trackProgress').textContent=format(audio.currentTime)+'/'+format(audio.duration);
+    const trackProgress = domCache.trackProgress || document.getElementById('trackProgress');
+    trackProgress.textContent=format(audio.currentTime)+'/'+format(audio.duration);
     // 歌词高亮交由 requestAnimationFrame 驱动（见 lyrics.js）；timeupdate 频率仅约 4Hz，不足以支撑逐字动画
-    updateMediaSessionPositionState(); 
+    updateMediaSessionPositionState();
     if(audio.duration > 0 && audio.currentTime / audio.duration >= 0.8) {
       const currentSong = currentQueue[currentTrack];
       if(currentSong && !trackedSongs[currentSong]) {
@@ -232,7 +257,7 @@ document.addEventListener('click', e=>{
 }, true);
 
 function renderPlaylist(){
-  const box=document.getElementById('playlist');
+  const box = domCache.playlist || document.getElementById('playlist');
   box.replaceChildren();
   if(currentQueue.length === 0) {
     const empty=document.createElement('div');
@@ -475,7 +500,7 @@ async function refreshList(){
 function setVolume(value) {
   audio.volume = value / 100;
   dbPut('setting', 'volume', value);
-  const v=document.getElementById('volumeValue');
+  const v = domCache.volumeValue || document.getElementById('volumeValue');
   if(v)v.textContent=Math.round(value);
 }
 

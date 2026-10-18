@@ -288,8 +288,10 @@ function setCover(picture) {
 function loadSongMetadata(songName, audioUrl) {
   // 读取标签失败时的统一回落：标题显示文件名，隐藏封面，清空歌词
   const showPlainMetadata = function() {
-    document.getElementById('songTitle').textContent = songName;
-    document.getElementById('songArtistAlbum').textContent = '';
+    const title = domCache.songTitle || document.getElementById('songTitle');
+    const artistAlbum = domCache.songArtistAlbum || document.getElementById('songArtistAlbum');
+    title.textContent = songName;
+    artistAlbum.textContent = '';
     setCover(null);
     updateMediaSessionMetadata(songName, '未知歌手', '', null);
     window.originalMediaInfo = { title: songName, artist: '未知歌手' };
@@ -315,20 +317,22 @@ function loadSongMetadata(songName, audioUrl) {
     jsmediatags.read(src, {
       onSuccess: function(tag) {
         const tags = tag.tags;
-        document.getElementById('songTitle').textContent = tags.title || songName;
-        document.getElementById('songArtistAlbum').textContent = 
+        const title = domCache.songTitle || document.getElementById('songTitle');
+        const artistAlbum = domCache.songArtistAlbum || document.getElementById('songArtistAlbum');
+        title.textContent = tags.title || songName;
+        artistAlbum.textContent =
           `${tags.artist || '未知歌手'}${tags.album ? ' - ' + tags.album : ''}`;
-        
+
         const artist = tags.artist || '未知歌手';
         const album = tags.album || '';
         const coverUrl = setCover(tags.picture);
-        
+
         updateMediaSessionMetadata(tags.title || songName, artist, album, coverUrl);
         window.originalMediaInfo = {
           title: tags.title || songName,
           artist: artist
         };
-        
+
         const uslt = tags.USLT?.data || tags.USLT;
         const lyricText = uslt?.lyrics || uslt?.text || tags.unsynchronisedLyrics?.text || tags.lyrics || '';
         currentLyrics = parseLyrics(String(lyricText));
@@ -386,7 +390,7 @@ function alignLyricsToActive() {
 }
 
 function renderLyrics() {
-  const box = document.getElementById('lyricsContainer');
+  const box = domCache.lyricsContainer || document.getElementById('lyricsContainer');
   // 歌词视图内只保留歌词行；延迟调整入口已迁至设置页
   box.replaceChildren();
   lyricRows = [];

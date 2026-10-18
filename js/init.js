@@ -1,7 +1,10 @@
 // ========== 初始化 ==========
 (async()=>{
   await initDB();
-  
+
+  // 初始化 DOM 缓存
+  initDomCache();
+
   // 加载设置
   const volumeSetting = await dbGet('setting', 'volume');
   if(volumeSetting) {

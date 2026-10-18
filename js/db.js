@@ -48,6 +48,30 @@ function dbDelete(storeName, key) {
   });
 }
 
+// 批量写入优化：多个写入操作合并到一个事务
+function dbPutBatch(storeName, entries) {
+  return new Promise(resolve => {
+    if(!db) return resolve(false);
+    const tx = db.transaction([storeName], 'readwrite');
+    const store = tx.objectStore(storeName);
+    entries.forEach(({key, value}) => store.put({id: key, data: value}));
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+  });
+}
+
+// 批量删除优化
+function dbDeleteBatch(storeName, keys) {
+  return new Promise(resolve => {
+    if(!db) return resolve(false);
+    const tx = db.transaction([storeName], 'readwrite');
+    const store = tx.objectStore(storeName);
+    keys.forEach(key => store.delete(key));
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+  });
+}
+
 // 整表替换：清空 + 批量写入放在同一个事务里，要么全成功要么全回滚
 // entries: [{id, data}, ...]
 function dbReplaceAll(storeName, entries) {

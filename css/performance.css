@@ -1,0 +1,213 @@
+/* ========== GPU 性能优化 ========== */
+
+/* 1. 启用硬件加速的关键动画属性 */
+.song.dragging,
+.lyric-line-container,
+.player-btn,
+#coverLyricToggle,
+.navbar button,
+.lyric-word-fg {
+  will-change: auto;
+  /* 仅在需要时启用 will-change，避免过度占用 GPU 内存 */
+}
+
+/* 拖动时才启用 will-change */
+.song.dragging {
+  will-change: transform;
+}
+
+/* 歌词滚动优化：使用 transform 而非 top/margin */
+#lyricsContainer {
+  /* 平滑滚动已在 player.css 中启用 */
+  /* 启用 GPU 合成层，减少重绘 */
+  transform: translateZ(0);
+}
+
+/* 2. 减少重绘区域 */
+.lyric-line-container.active-line {
+  /* 使用 transform scale 而非修改尺寸 */
+  /* transform: scale(1.03); 已在 player.css 中定义 */
+  /* 启用独立合成层 */
+  transform: scale(1.03) translateZ(0);
+}
+
+/* 3. 优化进度条填充动画 */
+input[type="range"]::-webkit-slider-runnable-track {
+  /* 使用 background-size 动画，GPU 友好 */
+  will-change: background-size;
+}
+
+/* 4. 优化封面旋转动画（如果有） */
+#albumCover img {
+  /* 启用 GPU 加速 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 5. 优化背景模糊效果 */
+#lyricsContainer,
+#coverLyricToggle,
+.navbar {
+  /* 强制使用 GPU 渲染毛玻璃 */
+  transform: translateZ(0);
+  /* 降低模糊半径以减少 GPU 负载 */
+  /* backdrop-filter 参数已在各自的 CSS 中定义 */
+}
+
+/* 6. 优化过渡动画 - 仅对 transform 和 opacity 使用过渡 */
+.song,
+.lyric-line,
+.lyric-translate,
+.player-btn {
+  /* 避免对 background/color 等触发重绘的属性使用 transition */
+  transition: transform var(--transition-base),
+              opacity var(--transition-base);
+}
+
+/* 7. 使用 contain 属性限制渲染范围 */
+.song {
+  contain: layout style;
+}
+
+.lyric-line-container {
+  contain: layout style paint;
+}
+
+#playlist,
+#lyricsContainer,
+#manageSongList {
+  contain: layout style;
+}
+
+/* 8. 优化字体渲染 */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* 启用字体特性加速 */
+  text-rendering: optimizeLegibility;
+}
+
+/* 但对于大量文本（歌词列表）使用速度优先 */
+#lyricsContainer,
+#playlist,
+#manageSongList {
+  text-rendering: optimizeSpeed;
+}
+
+/* 9. 隐藏元素使用 visibility 而非 display */
+.hidden-for-animation {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 10. 减少阴影的 GPU 负载 */
+.player-btn-main,
+#albumCover {
+  /* box-shadow 已在 player.css 中定义 */
+  /* 使用较少的模糊半径和扩散 */
+  /* 对于移动设备可考虑禁用阴影 */
+}
+
+@media (max-width: 768px) {
+  /* 移动设备减少 GPU 密集效果 */
+  .player-btn-main,
+  #albumCover {
+    box-shadow: none;
+  }
+
+  #lyricsContainer,
+  #coverLyricToggle {
+    /* 减少毛玻璃强度 */
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* 11. 优化动态色斑背景 */
+#ambient .blob {
+  /* 强制 GPU 合成 */
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  /* 使用 contain 隔离渲染 */
+  contain: layout style paint;
+}
+
+/* 12. 优化滚动性能 */
+#player-swiper,
+#playlist,
+#lyricsContainer,
+#manageSongList {
+  /* 启用硬件加速滚动 */
+  -webkit-overflow-scrolling: touch;
+  /* 隔离滚动容器 */
+  isolation: isolate;
+}
+
+/* 13. 减少不必要的合成层 */
+/* 移除不需要的 translateZ(0) */
+/* 仅在真正需要独立合成层时使用 */
+
+/* 14. 优化 SVG 图标渲染 */
+.icon {
+  /* 启用 GPU 加速 */
+  transform: translateZ(0);
+  /* 优化边缘抗锯齿 */
+  shape-rendering: geometricPrecision;
+}
+
+/* 15. 批量更新优化 - 使用 CSS 变量 */
+:root {
+  /* 进度条填充比例 - 通过 JS 更新一次变量 */
+  /* --fill-ratio 已在 player.css 中使用 */
+  /* 这样可以减少 style 更新次数 */
+}
+
+/* 16. 降低动画帧率以节省 GPU */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 17. 使用 content-visibility 优化长列表 */
+@supports (content-visibility: auto) {
+  .song,
+  .lyric-line-container,
+  .manage-song-item {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 41px; /* 预估行高 */
+  }
+}
+
+/* 18. 优化歌词逐字填充 */
+.lyric-word-fg {
+  /* 使用 clip-path 替代 width 变化 */
+  /* 保留原有实现，但确保使用 GPU */
+  transform: translateZ(0);
+  /* 不使用 transition - rAF 已经是 60fps */
+}
+
+/* 19. 减少重排 - 固定尺寸容器 */
+#albumCover {
+  /* aspect-ratio 已在 player.css 中定义 */
+  /* 预留固定空间，避免图片加载时重排 */
+}
+
+/* 20. 优化模糊效果的回退方案 */
+@supports not (backdrop-filter: blur(1px)) {
+  #lyricsContainer,
+  #coverLyricToggle,
+  .navbar {
+    /* 不支持时使用半透明纯色 */
+    background: var(--surface-4);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

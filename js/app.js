@@ -19,6 +19,31 @@ let lyricDelay = 0; // 歌词延迟（秒）
 let cachedSongsSet = new Set(); // 已缓存歌曲集合
 let songMetaMap = {};           // 歌曲名 → {addedTime, size, duration}，见 songmeta.js
 
+// DOM 元素缓存
+const domCache = {
+  playPauseBtn: null,
+  progressBar: null,
+  trackProgress: null,
+  songTitle: null,
+  songArtistAlbum: null,
+  volumeSlider: null,
+  volumeValue: null,
+  playlist: null,
+  lyricsContainer: null
+};
+
+function initDomCache() {
+  domCache.playPauseBtn = document.getElementById('playPauseBtn');
+  domCache.progressBar = document.getElementById('progressBar');
+  domCache.trackProgress = document.getElementById('trackProgress');
+  domCache.songTitle = document.getElementById('songTitle');
+  domCache.songArtistAlbum = document.getElementById('songArtistAlbum');
+  domCache.volumeSlider = document.getElementById('volumeSlider');
+  domCache.volumeValue = document.getElementById('volumeValue');
+  domCache.playlist = document.getElementById('playlist');
+  domCache.lyricsContainer = document.getElementById('lyricsContainer');
+}
+
 // ========== 图标 ==========
 // 图标 sprite 内联在 music.html 的 <!-- ICONS:START --> 块里（Bootstrap Icons）。
 // HTML 里统一写 <svg class="icon" aria-hidden="true"><use href="#play-fill"/></svg>；
