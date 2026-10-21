@@ -340,8 +340,9 @@ function attachDragSort(box, item, handle, index){
     if(!dragging)return;
     const ph=document.querySelector('.drag-placeholder');
     if(!ph)return;
-    // 条目以 fixed 定位悬浮并跟随指针，不占据布局空间
-    item.style.top=(itemTop0 + (e.clientY-startY))+'px';
+    // 条目以 fixed 定位悬浮并跟随指针，不占据布局空间。
+    // 坐标换算到包含块系：fixed 的包含块未必是视口（见 startDrag）
+    item.style.top=(itemTop0 + (e.clientY-startY) - containOriginY)+'px';
     const songs=[...box.querySelectorAll('.song:not(.dragging):not(.drag-placeholder)')];
     for(const s of songs){
       const r=s.getBoundingClientRect();
@@ -353,12 +354,13 @@ function attachDragSort(box, item, handle, index){
     box.appendChild(ph);
   }
 
-  let startY=0, itemTop0=0;
+  let startY=0, itemTop0=0, itemLeft0=0, containOriginX=0, containOriginY=0;
   function startDrag(e){
     dragging=true;
     startY=e.clientY;
     const r=item.getBoundingClientRect();
     itemTop0=r.top;
+    itemLeft0=r.left;
     // 用占位符顶住原位置
     placeholder=document.createElement('div');
     placeholder.className='song drag-placeholder';
@@ -368,10 +370,20 @@ function attachDragSort(box, item, handle, index){
     // 条目脱离文档流悬浮，避免列表凭空多出一行
     item.style.width=r.width+'px';
     item.style.position='fixed';
-    item.style.left=r.left+'px';
-    item.style.top=r.top+'px';
-    item.style.zIndex=1000;
     item.style.margin=0;
+    // fixed 元素的包含块未必是视口：祖先上的 contain: layout、transform、filter
+    // 都会让它成为包含块（#playlist 上就有 contain: layout style）。
+    // 直接把视口坐标写进 left/top，浮层会整体偏移一个「包含块原点」的量，
+    // 偏移量随容器在页面上的位置而变，看起来就是浮层位置随机漂移。
+    // 这里先把条目钉到 0,0 量出包含块原点，再把目标坐标换算进包含块系。
+    item.style.left='0px';
+    item.style.top='0px';
+    const cbRect=item.getBoundingClientRect();
+    containOriginX=cbRect.left;
+    containOriginY=cbRect.top;
+    item.style.left=(itemLeft0-containOriginX)+'px';
+    item.style.top=(itemTop0-containOriginY)+'px';
+    item.style.zIndex=1000;
     dragSuppressClick=true; // 松手后的 click 属于拖动，不能当播放点击
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
