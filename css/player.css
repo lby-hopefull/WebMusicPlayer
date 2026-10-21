@@ -383,12 +383,13 @@ input[type="range"]::-moz-range-thumb {
   background: var(--surface-3);
 }
 
-/* 拖动中的条目 */
+/* 拖动中的条目：浮在列表之上的毛玻璃卡片，与下层条目明确分层 */
 .song.dragging {
-  opacity: 0.6;
-  /* 与当前播放项同为主色淡染的半透明底，适配深浅主题 */
-  background: var(--nav-item-active);
-  box-shadow: var(--shadow-sm);
+  /* 材质本身已通透，不再叠加整体不透明度，否则底下的文字会透上来 */
+  background: var(--surface-4);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-md);
   z-index: 10;
   transition: none;
   will-change: transform;
@@ -441,6 +442,18 @@ input[type="range"]::-moz-range-thumb {
 #lyricsContainer::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+/* 首末行居中留白：用伪元素在首行之前、末行之后各占一段空白。
+   伪元素属于滚动内容，只增加可滚动的高度；改用内边距则会把容器自身撑大
+   （border-box 下内边距是边框盒的最小尺寸），容器一涨留白又要重算，
+   形成「留白 → 变高 → 留白」的循环。
+   留白高度由 JS 按容器实际高度写入 --lyrics-center-space（见 js/lyrics.js） */
+#lyricsContainer::before,
+#lyricsContainer::after {
+  content: '';
+  display: block;
+  height: var(--lyrics-center-space, 0px);
 }
 
 #page-player.lyrics-on #lyricsContainer {
@@ -524,6 +537,16 @@ input[type="range"]::-moz-range-thumb {
 .lyric-line-container.active-line {
   opacity: 1;
   transform: scale(1.03);
+  /* 当前播放行加粗：字重施加在行容器上，整行歌词与逐字行统一处理。
+     逐字行的两层文字（未唱段与已唱段）继承同一字重，填充裁剪仍与字形对齐 */
+  font-weight: var(--font-weight-bold);
+}
+
+/* 测量态：整行按加粗后的尺寸测量，并放行被 content-visibility 跳过的行，
+   否则屏外行只报 contain-intrinsic-size 的估值，预留高度会偏小 */
+#lyricsContainer.lyrics-measuring .lyric-line-container {
+  content-visibility: visible;
+  font-weight: var(--font-weight-bold);
 }
 
 .lyric-line-container.active-line .lyric-word-bg {
@@ -571,15 +594,14 @@ input[type="range"]::-moz-range-thumb {
   line-height: var(--lyric-line-height);
   color: var(--color-text-tertiary);
   text-align: center;
+  /* 字重不做过渡：加粗会改变折行，过渡期间文字反复重排，表现为抖动 */
   transition: color var(--transition-base),
-              font-weight var(--transition-base),
               transform var(--transition-base);
 }
 
 .lyric-line.active {
-  /* 整行歌词（非逐字渲染）的当前行同样用「已唱」强调色 */
+  /* 整行歌词（非逐字渲染）的当前行同样用「已唱」强调色；字重由行容器统一给出 */
   color: var(--lyric-sung);
-  font-weight: var(--font-weight-bold);
   transform: scale(1.05);
 }
 
@@ -591,8 +613,7 @@ input[type="range"]::-moz-range-thumb {
   margin-top: var(--spacing-xs);
   margin-bottom: var(--spacing-2xl);
   font-style: italic;
-  transition: color var(--transition-base),
-              font-weight var(--transition-base);
+  transition: color var(--transition-base);
 }
 
 .lyric-translate.active {

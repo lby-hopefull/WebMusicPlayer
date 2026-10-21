@@ -75,10 +75,14 @@
     position: relative;
     inset: auto;
     z-index: auto;
-    flex: 1 1 auto;
-    min-height: 0;
+    /* 横屏的歌词视口取固定高度：居中留白按视口高度的一半计算，
+       若高度随内容伸缩，留白会反过来撑高容器，形成「留白 → 变高 → 留白」的循环，
+       歌词只有两三行时也无法把首行滚到视口中线 */
+    flex: 0 0 auto;
+    height: 60vh;
     max-height: 60vh;
-    padding: var(--spacing-md) 0 0;
+    min-height: 0;
+    padding: var(--spacing-md) 0;
     background: transparent;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -121,6 +125,7 @@
   }
 
   #page-player.lyrics-on #lyricsContainer {
+    height: 52vh;
     max-height: 52vh;
   }
 }

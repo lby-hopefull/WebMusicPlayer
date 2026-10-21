@@ -369,6 +369,49 @@ function scrollLyricToCenter(idx) {
     top: Math.max(0, box.scrollTop + delta),
     behavior: 'smooth'
   });
+  scheduleLyricCenterCorrection();
+}
+
+// ========== 落点二次校正 ==========
+// 视口外的歌词行按 contain-intrinsic-size 的估值布局（performance.css 统一设为
+// 41px），与真实行高并不一致；行滚入视口后改按真实高度重排，滚动落点因此会差
+// 几像素。滚动结束后再校正一次，首行与末行才真正落在容器中线上。
+// 校正幅度超过阈值时放弃：此时的偏差多半来自用户手动滚动，不应把视图拉回。
+let lyricCenterFixRaf = null;
+const LYRIC_CENTER_FIX_LIMIT = 24;   // 像素：超出即视为用户操作
+
+function scheduleLyricCenterCorrection() {
+  const box = document.getElementById('lyricsContainer');
+  if (!box) return;
+  if (lyricCenterFixRaf !== null) cancelAnimationFrame(lyricCenterFixRaf);
+  let lastTop = -1;
+  let stillFrames = 0;
+  const tick = () => {
+    const current = Math.round(box.scrollTop);
+    if (current === lastTop) stillFrames++;
+    else { stillFrames = 0; lastTop = current; }
+    if (stillFrames >= 2) { correctLyricCenter(); return; }
+    lyricCenterFixRaf = requestAnimationFrame(tick);
+  };
+  lyricCenterFixRaf = requestAnimationFrame(tick);
+}
+
+function correctLyricCenter() {
+  lyricCenterFixRaf = null;
+  const box = document.getElementById('lyricsContainer');
+  if (!box || !lyricRows.length) return;
+
+  let idx = activeLineIdx;
+  if (idx < 0) idx = findActiveLineIndex(currentLyrics, audio.currentTime - lyricDelay);
+  const row = lyricRows[idx >= 0 ? idx : 0];
+  if (!row) return;
+  const delta = centerOffsetFor(row);
+  if (delta === null || Math.abs(delta) > LYRIC_CENTER_FIX_LIMIT) return;
+
+  const prevBehavior = box.style.scrollBehavior;
+  box.style.scrollBehavior = 'auto';
+  box.scrollTop = Math.max(0, box.scrollTop + delta);
+  box.style.scrollBehavior = prevBehavior;
 }
 
 // 打开歌词界面时立刻把当前行摆到中央：容器刚从 display:none 变为可见时
@@ -387,6 +430,44 @@ function alignLyricsToActive() {
   box.style.scrollBehavior = 'auto';
   box.scrollTop = Math.max(0, box.scrollTop + delta);
   box.style.scrollBehavior = prevBehavior;
+  // 瞬时定位同样会因行重排产生几像素偏差，下一帧再校正一次
+  scheduleLyricCenterCorrection();
+}
+
+// ========== 歌词首末行居中：上下预留半高留白 ==========
+// 滚动定位只能把某一行滚到容器中线：首行上方若没有留白，它最多停在容器顶部；
+// 末行则受最大滚动距离限制，同样到不了中线。上下各预留半个容器高的留白后，
+// 首行与末行都能被完整滚到可视区正中，中间行不受影响。
+// 留白高度取容器自身高度的一半，随视口与方向变化，不使用固定值。
+// 前提是容器高度与内容无关（竖屏由 inset 决定、横屏由显式高度决定），
+// 否则留白会撑高容器自身，形成「留白 → 变高 → 留白」的循环。
+function syncLyricsCenterSpace() {
+  const box = domCache.lyricsContainer || document.getElementById('lyricsContainer');
+  if (!box) return;
+  // 视图不可见（display:none）或没有歌词行时不需要留白
+  if (box.clientHeight <= 0 || !lyricRows.length) {
+    box.style.removeProperty('--lyrics-center-space');
+    return;
+  }
+  box.style.setProperty('--lyrics-center-space', Math.round(box.clientHeight / 2) + 'px');
+}
+
+// ========== 当前行加粗的布局预留 ==========
+// 当前行加粗会加宽文字，可能使同一条歌词多折一行；行高变化会带动后续所有行
+// 位移，已居中的当前行随之偏移，表现为换行时「抖一下」。
+// 渲染时按「整行加粗」批量测量一次各行高度并预留为 min-height：加粗与否不再
+// 改变任何行盒尺寸，滚动定位因此保持稳定。
+// 歌词视图不可见时（display:none）测得的高度为 0，留待可见时再测。
+function reserveBoldLineMetrics() {
+  const box = domCache.lyricsContainer || document.getElementById('lyricsContainer');
+  if (!box || !lyricRows.length || box.clientHeight <= 0) return;
+  // 测量态：整行临时加粗，并放行被 content-visibility 跳过的行——
+  // 否则屏外行只报 contain-intrinsic-size 的估值（41px），预留高度会偏小，
+  // 行滚入视口时仍会跳变。先写后读发生在同一任务，不会产生可见闪烁。
+  box.classList.add('lyrics-measuring');
+  const heights = lyricRows.map(r => r.el.offsetHeight);
+  box.classList.remove('lyrics-measuring');
+  lyricRows.forEach((r, i) => { r.el.style.minHeight = heights[i] + 'px'; });
 }
 
 function renderLyrics() {
@@ -462,6 +543,10 @@ function renderLyrics() {
   });
 
   box.appendChild(frag);
+  // 行盒尺寸先按加粗态预留，首末行留白随后同步；两者都要求容器已可见，
+  // 不可见时由 ResizeObserver 在视图切换后补做
+  reserveBoldLineMetrics();
+  syncLyricsCenterSpace();
   updateLyricHighlight();   // 立即对齐一次（歌曲可能是以暂停状态载入的）
 }
 
@@ -682,3 +767,18 @@ landscapeQuery.addEventListener('change', () => {
   const page = document.getElementById('page-player');
   if (page && page.classList.contains('lyrics-on')) renderLyricToggle(true);
 });
+
+// 容器尺寸变化时同步留白与加粗预留，并重新对齐当前行。
+// 容器刚从 display:none 变为可见时高度还是 0，首次对齐用的是旧内边距；
+// ResizeObserver 回调落在布局后、绘制前，补做一次同步即可同帧纠正，无闪烁。
+// 观测边框盒而非内容盒：留白正是通过内边距改变内容盒，按内容盒观测会多出一轮投递。
+const lyricsBoxForResize = domCache.lyricsContainer || document.getElementById('lyricsContainer');
+if (lyricsBoxForResize && typeof ResizeObserver === 'function') {
+  new ResizeObserver(() => {
+    syncLyricsCenterSpace();
+    reserveBoldLineMetrics();
+    if (document.getElementById('page-player').classList.contains('lyrics-on')) {
+      alignLyricsToActive();
+    }
+  }).observe(lyricsBoxForResize, { box: 'border-box' });
+}
