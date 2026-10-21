@@ -35,6 +35,13 @@
 - 播放页按视口方向切换形态：竖屏封面在上、控制区在下；横屏封面在左、控制区在右。
 - 横屏下开启歌词时，仅以歌词替换封面右侧的控制区，封面保持可见；竖屏下歌词为整屏视图。
 - 歌词视图隐藏滚动条，滚动能力保留。
+- 歌词视口上下各留出半个视口高的空白，首行与末行均可完整滚到可视区正中；
+  当前播放行以粗体显示，行高按粗体状态预留，切换时不产生位移。
+- 歌单标题右侧为展开指示箭头，箭头指向与展开状态一致；
+  展开状态在页面切换与列表重渲染后保持。
+- 管理弹窗内的排序组件与歌曲列表页共用同一份排序状态，任一侧改动后两边同步。
+  弹窗打开时背景施加模糊，下拉面板以浮层形式浮在弹窗之上。
+- 播放队列支持拖动排序，拖动中的条目以毛玻璃卡片浮于列表之上。
 - 播放模式、播放按钮与音量在全部视口下保持单行排列，窄屏时相应收缩。
 - 底部导航为悬浮胶囊，模糊背景，不占用布局高度；当前项以淡色胶囊标记容器，
   以主色标记文字与图标。
@@ -127,6 +134,15 @@ controls, IndexedDB offline caching and local folder import.
 - In landscape, enabling lyrics replaces only the control area to the right of the cover; the cover
   stays visible. In portrait the lyrics take the whole view.
 - The lyrics view hides its scrollbar while remaining scrollable.
+- The lyrics viewport reserves half a viewport of space above and below the lines, so the first and
+  the last line can both be scrolled fully into the centre. The playing line is shown in bold; line
+  heights are reserved for the bold state, so switching lines causes no shift.
+- Every playlist title carries an expand arrow whose direction follows the expanded state; the
+  expanded state survives page switches and list re-renders.
+- The sort controls inside the management dialog share one state with the song list page: a change
+  on either side updates both. The dialog blurs the page behind it, and its dropdown panels float
+  above the dialog.
+- The play queue supports drag sorting; the dragged entry floats above the list as a frosted card.
 - Play mode, transport buttons and volume stay on a single line at every viewport and shrink as
   space narrows.
 - The bottom navigation is a floating pill with a blurred backdrop and takes no layout height; the
