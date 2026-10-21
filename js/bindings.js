@@ -38,14 +38,19 @@ document.getElementById('createListBtn').addEventListener('click', () => createL
 document.getElementById('confirmAddSongsBtn').addEventListener('click', () => confirmAddSongs());
 document.getElementById('cancelAddSongsBtn').addEventListener('click', () => closeDialog());
 
-// ---- 排序（歌曲列表页与管理页各有一份） ----
-document.getElementById('listSortKey').addEventListener('change', function() {
-  listSortKey = this.value;
-  renderLists();
+// ---- 排序 ----
+// 歌曲列表页的排序栏与管理弹窗内的排序组件共用同一份状态（listSortKey/listSortDir），
+// 统一经 applyListSort 写入：两组控件同步显示、结果写入存储、各自重渲染。
+// 设置页内的管理列表另有自己的排序状态（manageSortKey/manageSortDir），互不影响。
+['listSortKey', 'dialogSortKey'].forEach(id => {
+  document.getElementById(id).addEventListener('change', function() {
+    applyListSort(this.value, listSortDir);
+  });
 });
-document.getElementById('listSortDir').addEventListener('change', function() {
-  listSortDir = this.value;
-  renderLists();
+['listSortDir', 'dialogSortDir'].forEach(id => {
+  document.getElementById(id).addEventListener('change', function() {
+    applyListSort(listSortKey, this.value);
+  });
 });
 document.getElementById('manageSortKey').addEventListener('change', function() {
   manageSortKey = this.value;

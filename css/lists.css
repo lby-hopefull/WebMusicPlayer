@@ -69,6 +69,42 @@
   font-size: var(--font-size-xs);
 }
 
+/* 标题右侧操作组：删除 / 管理按钮与展开指示箭头同组，整体右对齐 */
+.list-title-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+/* 展开与收起指示箭头：图标取自全局 sprite 的 chevron-right（指向右），
+   展开时旋转 90° 指向下，与设置分组标题的折叠箭头同一规范。
+   旋转由 .list.expanded 类统一驱动，与展开状态严格同步；
+   按钮热区即视觉范围（32px 见方） */
+.list-title .list-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: var(--spacing-xs);
+  padding: 0;
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+
+.list-title .list-expand-btn:hover {
+  color: var(--color-primary);
+}
+
+.list-title .list-expand-icon {
+  font-size: 16px;
+  transition: transform var(--transition-base);
+}
+
+.list.expanded .list-expand-icon {
+  transform: rotate(90deg);
+}
+
 .song-item {
   display: flex;
   justify-content: space-between;

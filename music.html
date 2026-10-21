@@ -352,6 +352,22 @@
 
 <dialog id="songDialog">
   <h3>选择要添加的歌曲</h3>
+  <!-- 弹窗内排序组件：与歌曲列表页的排序栏共用同一份排序状态
+       （listSortKey / listSortDir，见 js/ui.js），不另存一份；
+       任一侧改动后两边控件同步显示，歌曲列表与弹窗列表各自按新状态重渲染 -->
+  <div class="sort-bar">
+    <label for="dialogSortKey">排序：</label>
+    <select id="dialogSortKey" aria-label="管理弹窗排序方式">
+      <option value="name">名称</option>
+      <option value="duration">时长</option>
+      <option value="addedTime">添加时间</option>
+      <option value="size">大小</option>
+    </select>
+    <select id="dialogSortDir" aria-label="管理弹窗排序方向">
+      <option value="asc">升序</option>
+      <option value="desc">降序</option>
+    </select>
+  </div>
   <div id="dialogSongList"></div>
   <div class="dialog-footer">
     <button id="confirmAddSongsBtn" type="button">确认</button>

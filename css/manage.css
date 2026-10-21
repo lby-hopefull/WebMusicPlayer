@@ -185,9 +185,27 @@
 }
 
 /* 遮罩不做压暗：面板本身是浮层材质，足以与页面区分，
-   压暗反而让整屏变黑、影响辨认歌单内容 */
+   压暗反而让整屏变黑、影响辨认歌单内容。改为对背景施加模糊，
+   弹窗打开时聚焦内容，关闭后随遮罩一同消失，页面恢复原状 */
 #songDialog::backdrop {
   background: transparent;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* 不支持 backdrop-filter 时退回半透明纯色底，保证面板与背景的层次 */
+@supports not (backdrop-filter: blur(1px)) {
+  #songDialog::backdrop {
+    background: var(--surface-4);
+  }
+}
+
+/* 弹窗内排序栏：直接坐在对话框的毛玻璃材质上，自身不再叠加模糊层与半透明底。
+   下拉面板已进入 top layer（见 js/select.js），不会受排序栏的取样范围影响；
+   细边框勾出内嵌面板轮廓即可 */
+#songDialog .sort-bar {
+  background: transparent;
+  border: 1px solid var(--surface-border);
 }
 
 #dialogSongList {

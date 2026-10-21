@@ -135,6 +135,40 @@ function sortSongsForView(list, key, dir){
   return [...(list || [])].sort((a, b) => compareSongsBy(a, b, key, dir));
 }
 
+// 同 sortSongsForView，但保留每首歌在原数组中的下标：
+// 管理弹窗的勾选框以原始下标回写，排序只改变显示顺序
+function sortSongEntriesForView(list, key, dir){
+  const indexMap=new Map();
+  (list || []).forEach((song, i)=>{ if(!indexMap.has(song)) indexMap.set(song, i); });
+  return sortSongsForView(list, key, dir).map(song=>({ song, index: indexMap.get(song) }));
+}
+
+// ========== 排序状态的统一入口 ==========
+// 歌曲列表页的排序栏与管理弹窗内的排序组件共用同一份状态（listSortKey/listSortDir），
+// 不另存一份：任一侧改动都经由 applyListSort 写入，两组控件同步显示，
+// 结果落库，歌曲列表与弹窗列表各自按新状态重渲染。
+// 设置页内的管理列表另有自己的排序状态（manageSortKey/manageSortDir），互不影响。
+async function applyListSort(key, dir){
+  if(key) listSortKey=key;
+  if(dir) listSortDir=dir;
+  syncListSortControls();
+  await dbPut('setting', 'listSort', { key: listSortKey, dir: listSortDir });
+  renderLists();
+  renderDialogSongList();
+}
+
+// 把状态回写到两组控件。
+// 下拉框的显示由 select.js 接管，程序改动取值后需同步一次按钮文案
+function syncListSortControls(){
+  const pairs=[['listSortKey',listSortKey],['listSortDir',listSortDir],
+               ['dialogSortKey',listSortKey],['dialogSortDir',listSortDir]];
+  pairs.forEach(([id,value])=>{
+    const el=document.getElementById(id);
+    if(el && el.value!==value) el.value=value;
+  });
+  if(typeof syncAllCustomSelects==='function') syncAllCustomSelects();
+}
+
 // ========== 通用对话框（替代 alert / confirm） ==========
 // 原生 alert/confirm 会阻塞渲染线程，这里统一改用 <dialog>；
 // 文案一律通过 textContent 输出 —— 歌名与歌单名不会被当作 HTML 解析执行

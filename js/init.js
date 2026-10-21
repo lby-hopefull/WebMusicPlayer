@@ -20,6 +20,18 @@
   if(playModeSetting && playModeSetting.data) {
     document.getElementById('playMode').value = playModeSetting.data;
   }
+  // 加载歌曲列表排序状态（歌曲列表页与管理弹窗的排序组件共用同一份）
+  const listSortSetting = await dbGet('setting', 'listSort');
+  if(listSortSetting && listSortSetting.data){
+    if(listSortSetting.data.key) listSortKey = listSortSetting.data.key;
+    if(listSortSetting.data.dir) listSortDir = listSortSetting.data.dir;
+  }
+  syncListSortControls();
+  // 恢复各歌单的展开状态：列表重渲染后据此恢复，不会莫名收起
+  const expandedSetting = await dbGet('setting', 'expandedLists');
+  if(expandedSetting && Array.isArray(expandedSetting.data)){
+    expandedSetting.data.forEach(name=>expandedLists.add(name));
+  }
   // 下拉框由 select.js 接管显示，程序改动取值后同步按钮文案
   syncAllCustomSelects();
   

@@ -1,4 +1,13 @@
 // ========== 歌单管理 ==========
+// 各歌单的展开状态：页面切换与列表重渲染都会重建 DOM，状态记在这里，
+// 渲染时据此恢复，避免切回页面后展开项莫名收起
+const expandedLists = new Set();
+
+// 展开状态同时落库：刷新页面后仍保持展开
+function persistExpandedLists(){
+  dbPut('setting', 'expandedLists', [...expandedLists]);
+}
+
 async function loadLists(){
   const result = await dbGetAll('customLists');
   const lists = {};
@@ -36,27 +45,49 @@ async function showAddSongsDialog(listName){
   const dialog=document.getElementById('songDialog');
   const container=document.getElementById('dialogSongList');
   container.replaceChildren();
-  
+
   // 复用同一个对话框，此处替换其标题
   const title = dialog.querySelector('h3');
   if(title) title.textContent = '管理当前歌单歌曲';
-  
+
   const lists = await loadLists();
   const existingSongs = lists[listName] || [];
   allSongsCache = lists['全部歌曲'] || tracks;
-  
-  allSongsCache.forEach((song,i)=>{
+
+  dialog.showModal();
+  // 弹窗内的排序组件与歌曲列表页共用同一份状态，打开时先对齐显示
+  syncListSortControls();
+  renderDialogSongList(existingSongs);
+}
+
+// 管理弹窗内的歌曲列表：按当前排序状态展示。
+// 勾选框的值始终是歌曲在曲库中的原始下标，排序只改变显示顺序，
+// 不影响「确认」时按勾选结果回写歌单的逻辑。
+function renderDialogSongList(checkedSongs){
+  const dialog=document.getElementById('songDialog');
+  const container=document.getElementById('dialogSongList');
+  if(!dialog || !container || !dialog.open) return;
+
+  // 重排时保留已勾选状态：未传入时按当前勾选读取
+  let checked;
+  if(Array.isArray(checkedSongs)){
+    checked=new Set(checkedSongs);
+  }else{
+    checked=new Set([...container.querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.value));
+  }
+
+  container.replaceChildren();
+  sortSongEntriesForView(allSongsCache, listSortKey, listSortDir).forEach(({song,index})=>{
     const label=document.createElement('label');
     const cb=document.createElement('input');
     cb.type='checkbox';
-    cb.value=String(i);
-    cb.checked=existingSongs.includes(song);
+    cb.value=String(index);
+    cb.checked=checked.has(String(index)) || checked.has(song);
     // label 包住 input，点击文字即可勾选；歌名通过 textContent 写入，不参与 HTML 解析
     label.appendChild(cb);
     label.appendChild(document.createTextNode(' ' + song));
     container.appendChild(label);
   });
-  dialog.showModal();
 }
 
 async function confirmAddSongs(){
@@ -136,9 +167,11 @@ async function renderLists(){
     nameSpan.textContent=k;                 // 歌单名走 textContent
     title.appendChild(nameSpan);
 
-    if(k!=='全部歌曲'){
-      const btnWrap=document.createElement('span');
+    // 右侧操作组：删除 / 管理按钮与展开指示箭头同组，整体右对齐
+    const actions=document.createElement('span');
+    actions.className='list-title-actions';
 
+    if(k!=='全部歌曲'){
       const delBtn=document.createElement('button');
       delBtn.type='button';
       delBtn.textContent='删除';
@@ -152,18 +185,28 @@ async function renderLists(){
       manageBtn.setAttribute('aria-label',`管理歌单 ${k} 的歌曲`);
       manageBtn.addEventListener('click',e=>{ e.stopPropagation(); showAddSongsDialog(k); });
 
-      btnWrap.append(delBtn, manageBtn);
-      title.appendChild(btnWrap);
+      actions.append(delBtn, manageBtn);
     }
 
-    title.addEventListener('click',()=>{
-      const ul=title.nextElementSibling;
-      ul.style.display = ul.style.display==='none'?'block':'none';
-    });
+    // 展开 / 收起指示箭头：图标取全局 sprite 的 chevron-right（指向右），
+    // 展开时旋转 90° 指向下，与设置分组折叠箭头同一规范。
+    // 旋转方向由 .list.expanded 类统一驱动，与展开状态严格同步
+    const expandBtn=document.createElement('button');
+    expandBtn.type='button';
+    expandBtn.className='list-expand-btn';
+    const expandIcon=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    expandIcon.setAttribute('class','icon list-expand-icon');
+    expandIcon.setAttribute('aria-hidden','true');
+    const expandUse=document.createElementNS('http://www.w3.org/2000/svg','use');
+    expandUse.setAttribute('href','#chevron-right');
+    expandIcon.appendChild(expandUse);
+    expandBtn.appendChild(expandIcon);
+    actions.appendChild(expandBtn);
+    title.appendChild(actions);
+
     wrap.appendChild(title);
 
     const ul=document.createElement('div');
-    ul.style.display='none';
     // 按当前选择的排序方式展示（默认「名称 升序」，即原始顺序）
     sortSongsForView(lists[k]||[], listSortKey, listSortDir).forEach((song)=>{
       const item=document.createElement('div');
@@ -181,6 +224,22 @@ async function renderLists(){
       item.addEventListener('click',()=>playFromList(k,song));
       ul.appendChild(item);
     });
+
+    // 展开状态：重渲染后按记录恢复；箭头方向、aria 状态与实际展开情况一致
+    const setExpanded=(expanded)=>{
+      wrap.classList.toggle('expanded', expanded);
+      ul.style.display = expanded ? 'block' : 'none';
+      expandBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      expandBtn.setAttribute('aria-label', `${expanded?'收起':'展开'}歌单 ${k}`);
+      if(expanded) expandedLists.add(k); else expandedLists.delete(k);
+    };
+    setExpanded(expandedLists.has(k));
+
+    const toggle=()=>setExpanded(!wrap.classList.contains('expanded'));
+    // 箭头自行拦截事件，避免与标题的展开 / 收起重复触发
+    expandBtn.addEventListener('click',e=>{ e.stopPropagation(); toggle(); persistExpandedLists(); });
+    title.addEventListener('click',()=>{ toggle(); persistExpandedLists(); });
+
     wrap.appendChild(ul);
     div.appendChild(wrap);
   });
