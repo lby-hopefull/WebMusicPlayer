@@ -358,20 +358,23 @@ select option {
 .select-trigger-icon {
   font-size: 14px;
   color: var(--color-text-tertiary);
-  /* 右向箭头旋转成向下；展开时朝上 */
-  transform: rotate(90deg);
+  /* 右向箭头：收起时朝右，展开时旋转 90° 朝下，
+     与设置分组折叠箭头、歌单展开箭头同一规范 */
+  transform: rotate(0deg);
   transition: transform var(--transition-base);
 }
 
 .select-trigger[aria-expanded="true"] .select-trigger-icon {
-  transform: rotate(-90deg);
+  transform: rotate(90deg);
 }
 
+/* 下拉选项面板：popover 进入 top layer 后由 JS 写入视口坐标，
+   面板因此能浮在 showModal() 打开的对话框之上，不被对话框裁切 */
 .select-list {
   position: absolute;
   top: calc(100% + var(--spacing-xs));
   left: 0;
-  z-index: 60;
+  z-index: 200;
   min-width: 100%;
   max-height: 40vh;
   margin: 0;
@@ -380,11 +383,23 @@ select option {
   list-style: none;
   border: 1px solid var(--surface-border);
   border-radius: var(--radius-md);
-  /* 展开面板与其他浮层同素材：半透明底 + 毛玻璃，不做饱和度增强 */
-  background: var(--surface-4);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  /* 下拉面板统一材质：透明底 + 背景模糊，不叠加黑白，也不用主色染色。
+     面板的层次由边框与阴影给出，模糊负责把面板下方的内容柔化 */
+  background: transparent;
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
   box-shadow: var(--shadow-md);
+  color: var(--color-text-primary);
+}
+
+/* popover 展开时位于 top layer：包含块是视口而非触发器，
+   坐标改由 JS 依据触发器的位置计算后写入 */
+.select-list:popover-open {
+  position: fixed;
+  top: 0;
+  left: 0;
+  min-width: 0;
+  margin: 0;
 }
 
 .select-option {

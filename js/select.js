@@ -4,6 +4,11 @@
 // 选中后写回 select.value 并派发 change 事件，业务代码与无障碍名称均不受影响。
 // 本脚本未执行时退回原生控件（闭合状态由 base.css 自绘）。
 
+// 列表框用 popover 进入 top layer：模态对话框（showModal）本身就在 top layer，
+// 普通的绝对定位面板会被对话框的滚动容器裁切、也压不到对话框之上。
+// top layer 里面板的包含块是视口，位置改由 JS 按触发器的位置计算后写入。
+const supportsPopover = typeof HTMLElement !== 'undefined' && 'popover' in HTMLElement.prototype;
+
 function createCustomSelect(select) {
   if (select.dataset.customized === '1') return;
   select.dataset.customized = '1';
@@ -34,7 +39,11 @@ function createCustomSelect(select) {
   const list = document.createElement('ul');
   list.className = 'select-list';
   list.setAttribute('role', 'listbox');
-  list.hidden = true;
+  if (supportsPopover) {
+    list.popover = 'manual';   // 手动控制开合，关闭逻辑仍由本脚本负责
+  } else {
+    list.hidden = true;
+  }
 
   widget.append(trigger, list);
   select.after(widget);
@@ -43,6 +52,10 @@ function createCustomSelect(select) {
   select.setAttribute('aria-hidden', 'true');
 
   let activeIndex = 0;
+
+  function isOpen() {
+    return supportsPopover ? list.matches(':popover-open') : !list.hidden;
+  }
 
   function renderTrigger() {
     const opt = select.options[select.selectedIndex];
@@ -69,20 +82,50 @@ function createCustomSelect(select) {
     items.forEach((el, i) => el.classList.toggle('is-active', i === activeIndex));
   }
 
+  // 面板定位：默认贴在触发器下方，空间不足时改为向上弹出；
+  // 宽度与触发器对齐，避免面板比触发器宽出一截
+  function positionList() {
+    if (!supportsPopover) return;
+    const r = trigger.getBoundingClientRect();
+    const gap = parseFloat(getComputedStyle(widget).getPropertyValue('--spacing-xs')) || 8;
+    const listH = list.offsetHeight || 0;
+    const spaceBelow = window.innerHeight - r.bottom;
+    const top = spaceBelow < listH + gap && r.top > listH + gap
+      ? r.top - listH - gap
+      : r.bottom + gap;
+    list.style.left = Math.max(0, Math.min(r.left, window.innerWidth - list.offsetWidth)) + 'px';
+    list.style.top = Math.max(0, top) + 'px';
+    list.style.minWidth = r.width + 'px';
+  }
+
   function open() {
     renderList();
-    list.hidden = false;
+    if (supportsPopover) {
+      if (!list.matches(':popover-open')) list.showPopover();
+      positionList();
+    } else {
+      list.hidden = false;
+    }
     trigger.setAttribute('aria-expanded', 'true');
     setActive(Math.max(select.selectedIndex, 0));
     document.addEventListener('pointerdown', onPointerDownOutside, true);
     document.addEventListener('keydown', onKeydown);
+    // 页面滚动或窗口尺寸变化后，触发器的位置随之改变，面板需要跟随
+    window.addEventListener('scroll', positionList, true);
+    window.addEventListener('resize', positionList);
   }
 
   function close() {
-    list.hidden = true;
+    if (supportsPopover) {
+      if (list.matches(':popover-open')) list.hidePopover();
+    } else {
+      list.hidden = true;
+    }
     trigger.setAttribute('aria-expanded', 'false');
     document.removeEventListener('pointerdown', onPointerDownOutside, true);
     document.removeEventListener('keydown', onKeydown);
+    window.removeEventListener('scroll', positionList, true);
+    window.removeEventListener('resize', positionList);
   }
 
   function onPointerDownOutside(event) {
@@ -109,7 +152,7 @@ function createCustomSelect(select) {
   }
 
   trigger.addEventListener('click', () => {
-    if (list.hidden) open(); else close();
+    if (isOpen()) close(); else open();
   });
 
   // 业务代码直接改 select.value（如启动时恢复播放模式）后同步显示
