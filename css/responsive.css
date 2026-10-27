@@ -174,7 +174,7 @@
     --color-border-light: #3a3a3a;
     /* 深色背景上要「更亮」才算高亮：未唱段压暗，已唱段用更亮的蓝 */
     --lyric-unsung: #7a7a7a;
-    --lyric-sung: #64b5f6;
+    --lyric-sung: #1976D2;
     --color-primary-light: #1E3A8A;
     /* 深色主题：半透明背景取白，混合基准取黑 */
     --surface-1: rgba(255, 255, 255, var(--surface-1-alpha));
@@ -198,7 +198,7 @@ html[data-theme="dark"] {
   --color-border-light: #3a3a3a;
   /* 深色背景上要「更亮」才算高亮：未唱段压暗，已唱段用更亮的蓝 */
   --lyric-unsung: #7a7a7a;
-  --lyric-sung: #64b5f6;
+  --lyric-sung: #1976D2;
   --color-primary-light: #1E3A8A;
   /* 深色主题：半透明背景取白，混合基准取黑 */
   --surface-1: rgba(255, 255, 255, var(--surface-1-alpha));
