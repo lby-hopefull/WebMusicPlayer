@@ -1,23 +1,13 @@
 // ========== 系统媒体播放器控制 ==========
 function setupMediaSession() {
   if ('mediaSession' in navigator) {
-    // 注册核心动作处理器：播放、暂停、上一首、下一首
+    // 注册核心动作处理器：播放、暂停、上一首、下一首（播放/暂停走音量淡入淡出）
     navigator.mediaSession.setActionHandler('play', () => {
-      if (audio.paused) {
-        audio.play().catch(err=>{ console.warn('play() 被中断：', err.name); });
-        isPlaying = true;
-        updateBtn();
-        updateMediaSessionPlaybackState();
-      }
+      if (audio.paused || pausing) playWithFade();
     });
 
     navigator.mediaSession.setActionHandler('pause', () => {
-      if (!audio.paused) {
-        audio.pause();
-        isPlaying = false;
-        updateBtn();
-        updateMediaSessionPlaybackState();
-      }
+      if (!audio.paused) pauseWithFade();
     });
 
     navigator.mediaSession.setActionHandler('previoustrack', () => {

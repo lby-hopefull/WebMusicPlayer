@@ -1,0 +1,595 @@
+/* ========== 全站动画系统 ========== */
+/* 最后加载，统一接管：页面切换、菜单展开收缩、导航指示、按钮微交互、
+   列表交错入场、下拉与对话框、歌词与封面切换、播放状态反馈。
+   需要测量布局的部分由 js/animate.js 配合完成；
+   prefers-reduced-motion 的全局降级见 performance.css 与 js/animate.js。 */
+
+:root {
+  --ease-out: cubic-bezier(.2, .8, .25, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .44, 1);
+  --ease-in: cubic-bezier(.4, 0, .7, .2);
+}
+
+/* ========== 关键帧 ========== */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes icon-pop {
+  0%   { transform: scale(.6); }
+  60%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* 底部胶囊图标不做弹跳动画（nav-press 已移除） */
+
+@keyframes spin-once {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes spin-loop {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes value-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* 页面切换：前进时旧页向左出、新页从右来；后退相反 */
+@keyframes page-in-right {
+  from { opacity: 0; transform: translateX(36px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes page-in-left {
+  from { opacity: 0; transform: translateX(-36px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes page-out-left {
+  to { opacity: 0; transform: translateX(-24px); }
+}
+
+@keyframes page-out-right {
+  to { opacity: 0; transform: translateX(24px); }
+}
+
+/* 播放器页含 fixed 定位的歌词浮层与歌词开关，
+   页面级动画只用透明度，位移交给内部的 swiper，避免 fixed 元素跟着漂移 */
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes page-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dialog-out {
+  to { opacity: 0; transform: translateY(8px) scale(.97); }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes backdrop-out {
+  to { opacity: 0; }
+}
+
+@keyframes lyrics-in {
+  from { opacity: 0; transform: scale(.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* 切歌时封面与歌曲信息的换入 */
+@keyframes swap-in {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cover-in {
+  from { opacity: 0; transform: scale(.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes navbar-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 队列当前项的均衡器跳动（暂停时静止在低电平，见下方状态规则） */
+@keyframes eq-scale {
+  0%, 100% { transform: scaleY(.25); }
+  35%      { transform: scaleY(1); }
+  70%      { transform: scaleY(.5); }
+}
+
+/* 批量导入/下载进度条的流动条纹 */
+@keyframes progress-stripes {
+  to { background-position: 28px 0; }
+}
+
+/* ========== 首屏入场 ========== */
+.navbar {
+  animation: navbar-in .55s var(--ease-out) .1s backwards;
+  transition: transform .35s var(--ease-out), opacity .35s ease, visibility 0s;
+}
+
+#albumCover {
+  animation: cover-in .65s var(--ease-out) .05s backwards;
+}
+
+#progressSection {
+  animation: rise-in .55s var(--ease-out) .18s backwards;
+}
+
+.controls-row {
+  animation: rise-in .55s var(--ease-out) .3s backwards;
+}
+
+#coverLyricToggle {
+  animation: fade-in .5s ease .4s backwards;
+}
+
+/* ========== 页面切换 ========== */
+/* 方向类由 showPage() 按导航顺序写入；退出 .15s 后切换 active，入场 .32s */
+.page-container > section.page-enter.dir-forward {
+  animation: page-in-right .32s var(--ease-out) both;
+}
+
+.page-container > section.page-enter.dir-backward {
+  animation: page-in-left .32s var(--ease-out) both;
+}
+
+.page-container > section.page-exit.dir-forward {
+  animation: page-out-left .15s ease-in both;
+}
+
+.page-container > section.page-exit.dir-backward {
+  animation: page-out-right .15s ease-in both;
+}
+
+#page-player.page-enter.dir-forward,
+#page-player.page-enter.dir-backward {
+  animation: page-fade-in .32s ease both;
+}
+
+#page-player.page-enter.dir-forward #player-swiper {
+  animation: page-in-right .32s var(--ease-out) both;
+}
+
+#page-player.page-enter.dir-backward #player-swiper {
+  animation: page-in-left .32s var(--ease-out) both;
+}
+
+#page-player.page-enter #coverLyricToggle {
+  animation: fade-in .4s ease both;
+}
+
+#page-player.page-exit.dir-forward,
+#page-player.page-exit.dir-backward {
+  animation: page-fade-out .15s ease-in both;
+}
+
+/* 页面入场时各自内容的级联上升 */
+#page-lists.page-enter .sort-bar {
+  animation: rise-in .4s var(--ease-out) both;
+  animation-delay: .06s;
+}
+
+#page-lists.page-enter .new-list-row {
+  animation: rise-in .4s var(--ease-out) both;
+  animation-delay: .12s;
+}
+
+#page-lists.page-enter #customLists > .list {
+  animation: rise-in .42s var(--ease-out) both;
+  animation-delay: calc(.14s + var(--i, 0) * 45ms);
+}
+
+#page-stats.page-enter #stats {
+  animation: rise-in .4s var(--ease-out) both;
+  animation-delay: .08s;
+}
+
+#page-settings.page-enter .settings-section {
+  animation: rise-in .42s var(--ease-out) both;
+  animation-delay: calc(.06s + var(--i, 0) * 70ms);
+}
+
+.settings-section:nth-child(1) { --i: 0; }
+.settings-section:nth-child(2) { --i: 1; }
+.settings-section:nth-child(3) { --i: 2; }
+
+#page-player.page-enter #playlist .song:nth-child(-n+14) {
+  animation: rise-in .38s var(--ease-out) both;
+  animation-delay: calc(.1s + var(--i, 0) * 30ms);
+}
+
+/* 通用交错入场：js/animate.js 的 staggerChildren() 写入 --i 并加类 */
+.stagger-children > * {
+  animation: rise-in .38s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 32ms);
+}
+
+/* ========== 底部导航 ========== */
+/* 高亮背景交给滑动胶囊，按钮只保留主色文字与图标 */
+.navbar button {
+  position: relative;
+  z-index: 1;
+  transition: color .25s ease, background-color .25s ease,
+              transform .18s var(--ease-out);
+}
+
+.navbar button.active {
+  background: transparent;
+}
+
+.nav-indicator {
+  position: absolute;
+  z-index: 0;
+  border-radius: var(--radius-full);
+  background: var(--nav-item-active);
+  pointer-events: none;
+  transition: left .3s var(--ease-out), width .3s var(--ease-out),
+              top .3s var(--ease-out), height .3s var(--ease-out);
+}
+
+.navbar button .icon {
+  transition: transform .25s var(--ease-spring);
+}
+
+/* 底部胶囊图标不做弹跳动画：悬停与点击均仅靠背景高亮反馈 */
+.navbar button:active:not(:disabled) {
+  transform: scale(.94);
+}
+
+/* 竖屏歌词打开时胶囊滑出屏幕（原为 display:none 硬切换）；
+   visibility 延迟切换，滑出完成后才退出命中测试与焦点序列 */
+@media (orientation: portrait) {
+  body.lyrics-open .navbar {
+    display: flex;
+    transform: translateX(-50%) translateY(calc(100% + var(--spacing-md) + 4px));
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform .3s ease-in, opacity .3s ease, visibility 0s .3s;
+  }
+}
+
+/* ========== 按钮微交互 ========== */
+button {
+  transition: background-color .25s ease, color .25s ease,
+              transform .18s var(--ease-out), box-shadow .25s ease, opacity .25s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(.95);
+}
+
+/* 播放控制按钮：悬停高亮平滑渐变（背景淡入淡出），按压回弹 */
+.controls-row .player-btn {
+  transition: background-color .3s ease, color .3s ease,
+              transform .18s var(--ease-out), box-shadow .3s ease;
+}
+
+.controls-row .player-btn:hover:not(:disabled) {
+  transform: none;
+}
+
+.controls-row .player-btn:active:not(:disabled) {
+  transform: scale(.92);
+}
+
+/* 主题选择器滑动高亮框：跟随激活项移动（位置由 js/animate.js 写入） */
+.theme-indicator {
+  position: absolute;
+  z-index: 0;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--nav-item-active);
+  pointer-events: none;
+  opacity: 0;
+  transition: left .3s var(--ease-out), top .3s var(--ease-out),
+              width .3s var(--ease-out), height .3s var(--ease-out);
+}
+
+/* 主题按钮按压反馈见 settings.css 的 :active（按住缩小、松开恢复） */
+
+.select-trigger:active:not(:disabled) {
+  transform: scale(.97);
+}
+
+/* 图标换向/刷新等一次性或循环旋转 */
+.icon-pop { animation: icon-pop .3s var(--ease-spring); }
+.spin-once { animation: spin-once .55s var(--ease-out); }
+.spin-loop { animation: spin-loop .9s linear infinite; }
+
+/* 步进器数值改动时的弹跳 */
+.value-pop { animation: value-pop .3s var(--ease-spring); }
+
+/* ========== 列表行 ========== */
+/* performance.css 把 .song 的过渡收窄到 transform/opacity，这里补回底色，
+   当前播放项的高亮因此淡入淡出而不是硬闪 */
+.song {
+  transition: background-color .25s ease, color .25s ease,
+              transform .25s var(--ease-out), opacity .25s ease;
+}
+
+/* 拖动排序时悬停位移关闭，避免 FLIP 测量到额外偏移 */
+#playlist:has(.dragging) .song:hover {
+  transform: none;
+}
+
+/* 抓起即轻微放大浮起（scale 独立于定位用的 top/left） */
+.song.dragging {
+  scale: 1.01;
+  transition: scale .18s ease;
+}
+
+.song-item,
+.manage-song-item {
+  transition: background-color .25s ease, transform .25s var(--ease-out);
+}
+
+.song-item:hover {
+  background: var(--surface-2);
+}
+
+/* 当前播放行的均衡器 */
+.song .eq {
+  display: none;
+}
+
+.song.playing .eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 14px;
+  flex: none;
+}
+
+.song .eq i {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-primary);
+  transform: scaleY(.3);
+  transform-origin: bottom;
+}
+
+body.is-playing .song.playing .eq i {
+  animation: eq-scale 1s ease-in-out infinite;
+}
+
+body.is-playing .song.playing .eq i:nth-child(2) { animation-delay: .18s; }
+body.is-playing .song.playing .eq i:nth-child(3) { animation-delay: .36s; }
+
+/* 统计行悬停 */
+#stats div {
+  transition: background-color .25s ease;
+}
+
+#stats div:hover {
+  background: var(--surface-2);
+}
+
+/* 空状态提示淡入 */
+.empty-hint {
+  animation: fade-in .4s ease;
+}
+
+/* 缓存状态标签的颜色随状态平滑变化 */
+.cache-status {
+  transition: color .3s ease, background-color .3s ease, border-color .3s ease;
+}
+
+/* ========== 菜单展开收缩 ========== */
+/* 高度动画由 js/animate.js 测量并驱动；这里负责箭头与阴影的状态同步 */
+.settings-section.closing .section-chevron {
+  transform: rotate(0deg);
+}
+
+.section-chevron,
+.list-title .list-expand-icon,
+.select-trigger-icon {
+  transition: transform .3s var(--ease-spring);
+}
+
+/* ========== 下拉菜单 ========== */
+/* 面板的进出动画由 select.js 以 WAAPI 驱动（需要等动画结束才隐藏）；
+   选项悬停仅背景高亮，不右移 */
+.select-option {
+  transition: background-color .18s ease;
+}
+
+/* ========== 对话框 ========== */
+dialog[open] {
+  animation: dialog-in .3s var(--ease-out);
+}
+
+dialog[open]::backdrop {
+  animation: backdrop-in .3s ease;
+}
+
+dialog.dialog-closing {
+  animation: dialog-out .18s ease-in forwards;
+}
+
+dialog.dialog-closing::backdrop {
+  animation: backdrop-out .18s ease-in forwards;
+}
+
+/* 选择歌曲弹窗的行级联入场（--i 由 renderDialogSongList 写入） */
+#songDialog[open] #dialogSongList label:nth-child(-n+14) {
+  animation: rise-in .3s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 25ms);
+}
+
+/* ========== 歌词与封面 ========== */
+/* 播放控制切到歌词：轻柔的聚焦淡入（透明度 + 微缩放），easeOutCubic 单调收敛、无弹跳 */
+#page-player.lyrics-on #lyricsContainer {
+  animation: lyrics-in .45s cubic-bezier(.33, 1, .68, 1);
+}
+
+/* 切歌换入：类由 lyrics.js 在封面与歌曲信息更新时重放 */
+.swap-in {
+  animation: swap-in .45s var(--ease-out);
+}
+
+/* 歌词行颜色恢复过渡（performance.css 的收窄规则把它去掉了） */
+.lyric-line {
+  transition: color .3s ease, transform .3s ease, opacity .3s ease;
+}
+
+/* 歌词聚焦：以当前行为中心，按距离渐变模糊与透明度，中心行最清晰，
+   向上/向下逐行变模糊。--dist 由 lyrics.js 在换行时写入（到当前行的绝对距离）。
+   过渡延迟随距离递增，换行时清晰度自中心向两侧依次扩散，与逐行滚动呼应。 */
+.lyric-line-container {
+  filter: blur(calc(min(var(--dist, 0), 5) * 1.3px));
+  opacity: calc(1 - min(var(--dist, 0), 5) * 0.14);
+  transition: filter .5s ease, opacity .5s ease, transform .45s var(--ease-out);
+  transition-delay: calc(min(var(--dist, 0), 5) * 30ms);
+}
+
+.lyric-line-container.active-line {
+  filter: blur(0);
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+/* 手动浏览：滚动歌词时所有行清晰可读（覆盖距离模糊），停止后由 JS 摘类恢复聚焦 */
+#lyricsContainer.lyrics-browsing .lyric-line-container {
+  filter: blur(0);
+  opacity: 1;
+  transition: filter .2s ease, opacity .2s ease;
+  transition-delay: 0s;
+}
+
+/* 当前行里已开始高亮的字/词整体统一上浮：一个字内不拆分「半浮半不浮」，
+   上浮施加在 wrapper 上，bg 与 fg 随之整体浮起，字内的已唱/未唱仍由 fg 宽度与
+   bg 裁剪表现。word-started 由 setWordFill 在 fill>0 时写入；仅当前行生效，
+   换行后平滑落回。过渡放慢，让上浮动作更明显。 */
+.lyric-word-wrapper {
+  transition: transform .6s var(--ease-out);
+}
+
+.lyric-line-container.active-line .lyric-word-wrapper.word-started {
+  transform: translateY(-0.09em);
+}
+
+/* ========== 滑块（进度条 / 音量） ========== */
+/* timeupdate 约 4Hz，给填充段加短线性过渡，播放时进度平滑推进；
+   拖动中（:active）关闭过渡，跟手不滞后 */
+input[type="range"]::-webkit-slider-runnable-track {
+  transition: background-size .22s linear;
+}
+
+input[type="range"]:active::-webkit-slider-runnable-track {
+  transition: none;
+}
+
+input[type="range"]::-moz-range-progress {
+  transition: width .22s linear;
+}
+
+input[type="range"]:active::-moz-range-progress {
+  transition: none;
+}
+
+/* 点击进度条跳转时，填充段平滑滑到目标位置（smooth-seek 由 player.js 写入）。
+   规则排在 :active 之后以覆盖其「关闭过渡」：点击跳转即使处于 :active 也平滑；
+   拖动拇指时 player.js 移除该类，回落到 :active 的无过渡以跟手。 */
+input[type="range"].smooth-seek::-webkit-slider-runnable-track {
+  transition: background-size .4s cubic-bezier(.22, .9, .3, 1);
+}
+
+input[type="range"].smooth-seek::-moz-range-progress {
+  transition: width .4s cubic-bezier(.22, .9, .3, 1);
+}
+
+/* ========== 勾选框 ========== */
+input[type="checkbox"]::before {
+  transition: transform .22s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+/* ========== 输入框 ========== */
+.new-list-row input {
+  transition: border-color .25s ease, background-color .25s ease, box-shadow .25s ease;
+}
+
+.new-list-row input:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+/* ========== 批量进度条 ========== */
+/* display 切换为 block 时入场动画自动重放；隐藏走 .leaving 淡出 */
+.progress-container {
+  animation: rise-in .3s var(--ease-out);
+}
+
+.progress-container.leaving {
+  animation: fade-out .2s ease-in forwards;
+}
+
+.progress-bar-fill {
+  background-image: linear-gradient(45deg,
+    rgba(255, 255, 255, .22) 25%, transparent 25%,
+    transparent 50%, rgba(255, 255, 255, .22) 50%,
+    rgba(255, 255, 255, .22) 75%, transparent 75%);
+  background-size: 28px 28px;
+  animation: progress-stripes .9s linear infinite;
+}
+
+/* ========== 主题切换 ========== */
+/* 切主题时短暂给全站颜色属性加过渡，结束后移除，不干扰常驻交互过渡。
+   排除滑动指示框与主题按钮：否则 !important 会覆盖其 left/width 或 transform 过渡，
+   导致高亮框瞬移、主题按钮按压缩放动画失效 */
+html.theme-transition *:not(.theme-indicator):not(.nav-indicator):not(.theme-option) {
+  transition: background-color .45s ease, color .45s ease,
+              border-color .45s ease, box-shadow .45s ease, fill .45s ease !important;
+}
+
+/* ========== 背景色斑的颜色随封面平滑迁移 ========== */
+/* 注册为可动画的自定义属性后，切歌时 --ambient-* 的变更会被插值，
+   三个光斑的颜色随之渐变而不是跳变；不支持的浏览器退回瞬时切换 */
+@property --ambient-1 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #2196F3;
+}
+
+@property --ambient-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1976D2;
+}
+
+@property --ambient-3 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #BBDEFB;
+}
+
+:root {
+  transition: --ambient-1 1.2s ease, --ambient-2 1.2s ease, --ambient-3 1.2s ease;
+}

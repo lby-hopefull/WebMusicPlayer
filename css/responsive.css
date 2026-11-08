@@ -104,15 +104,17 @@
   }
 }
 
-/* 矮横屏（手机横放 / 小窗口）：压缩纵向留白 */
+/* 矮横屏（手机横放 / 小窗口）：压缩纵向留白，但底部仍须预留导航高度，
+   否则队列最后一行会被悬浮胶囊遮挡 */
 @media (orientation: landscape) and (max-height: 600px) {
   .player-page {
     padding: var(--spacing-md);
+    padding-bottom: calc(var(--navbar-height) + var(--spacing-md));
   }
 
   #player-page-cover {
     gap: var(--spacing-xl);
-    padding-bottom: var(--spacing-sm);
+    padding-bottom: calc(var(--navbar-height) + var(--spacing-sm));
   }
 
   #albumCover {

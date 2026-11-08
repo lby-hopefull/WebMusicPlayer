@@ -261,6 +261,8 @@ let coverObjectUrl = null;
 function setCover(picture) {
   const img = document.getElementById('coverImage');
   const placeholder = document.getElementById('coverPlaceholder');
+  // 封面换入动画：有封面与回落占位两种路径都重放一次
+  restartAnimation(document.getElementById('albumCover'), 'swap-in');
 
   if (coverObjectUrl) {
     URL.revokeObjectURL(coverObjectUrl);   // 释放上一张，否则每切一首就泄漏一份
@@ -292,6 +294,7 @@ function loadSongMetadata(songName, audioUrl) {
     const artistAlbum = domCache.songArtistAlbum || document.getElementById('songArtistAlbum');
     title.textContent = songName;
     artistAlbum.textContent = '';
+    restartAnimation(document.getElementById('trackInfo'), 'swap-in');
     setCover(null);
     updateMediaSessionMetadata(songName, '未知歌手', '', null);
     window.originalMediaInfo = { title: songName, artist: '未知歌手' };
@@ -322,6 +325,7 @@ function loadSongMetadata(songName, audioUrl) {
         title.textContent = tags.title || songName;
         artistAlbum.textContent =
           `${tags.artist || '未知歌手'}${tags.album ? ' - ' + tags.album : ''}`;
+        restartAnimation(document.getElementById('trackInfo'), 'swap-in');
 
         const artist = tags.artist || '未知歌手';
         const album = tags.album || '';
@@ -358,19 +362,85 @@ function centerOffsetFor(row) {
   return (rowRect.top + rowRect.height / 2) - (boxRect.top + boxRect.height / 2);
 }
 
-// 换行时滚动：仅在歌词行切换时调用，不用计时器，也不因用户滚动而暂停
+// 换行时滚动：自上而下逐行缓冲滑入。
+// 先把容器瞬时定位到「当前行居中」的目标（布局与滚动条立即正确），再对每一行做
+// FLIP：从滚动前的视觉位置（translate 偏移 scrollDelta）缓动滑回新位置；
+// 越靠上的行越早启动，形成从上到下依次滚动的波浪。用独立的 translate 属性而非
+// transform，避免覆盖当前行的 scale 强调。仅在歌词行切换时调用。
+let lyricScrollAnims = [];
+let lyricAutoScrollAt = 0;   // 最近一次程序定位的时刻，用于区分手动滚动
 function scrollLyricToCenter(idx) {
   const row = lyricRows[idx];
-  if (!row) return;
   const box = document.getElementById('lyricsContainer');
-  const delta = centerOffsetFor(row);
-  if (delta === null) return;
-  box.scrollTo({
-    top: Math.max(0, box.scrollTop + delta),
-    behavior: 'smooth'
+  if (!row || !box) return;
+  // 用 offsetTop/offsetHeight 计算目标（布局坐标，不受 content-visibility 屏外估值
+  // 与模糊滤镜影响）：行中心对齐容器中线。行高已由 reserveBoldLineMetrics 预留，
+  // 屏外行的 offsetTop 也稳定，落点比 getBoundingClientRect 更准。
+  const targetTop = Math.max(0, row.el.offsetTop + row.el.offsetHeight / 2 - box.clientHeight / 2);
+
+  // 取消上一次未完成的逐行动画，快速换行时不叠加
+  lyricScrollAnims.forEach(a => a.cancel());
+  lyricScrollAnims = [];
+
+  const scrollDelta = targetTop - box.scrollTop;
+  const prevBehavior = box.style.scrollBehavior;
+  box.style.scrollBehavior = 'auto';
+  lyricAutoScrollAt = performance.now();
+  box.scrollTop = targetTop;
+  box.style.scrollBehavior = prevBehavior;
+
+  if (prefersReducedMotion() || Math.abs(scrollDelta) < 1) return;
+
+  const viewH = box.clientHeight || 1;
+  const DURATION = 520, STAGGER = 240;
+  lyricRows.forEach(r => {
+    const el = r.el;
+    const visualTop = el.offsetTop - targetTop;   // 滚动后该行相对容器顶的位置
+    // 只动画视口附近的行，屏外行交给 content-visibility，不做无谓动画
+    if (visualTop < -viewH || visualTop > viewH * 2) return;
+    // 自上而下：位置越靠上延迟越小，依次启动
+    const t = Math.min(1, Math.max(0, visualTop / viewH));
+    const anim = el.animate(
+      [
+        { translate: '0px ' + scrollDelta + 'px' },
+        { translate: '0px 0px' }
+      ],
+      { duration: DURATION, delay: t * STAGGER, easing: 'cubic-bezier(.22,.9,.3,1)', fill: 'backwards' }
+    );
+    lyricScrollAnims.push(anim);
   });
-  scheduleLyricCenterCorrection();
 }
+
+// 聚焦梯度：写入每行到当前行的距离，驱动模糊与透明度（见 animations.css）
+function updateLyricFocus(focusIdx) {
+  for (let i = 0; i < lyricRows.length; i++) {
+    lyricRows[i].el.style.setProperty('--dist', String(Math.abs(i - focusIdx)));
+  }
+}
+
+// ========== 手动浏览模式 ==========
+// 手动滚动歌词时暂时取消距离模糊，让每一行都清晰可读；停止滚动一段时间后恢复聚焦。
+// 程序换行定位同样触发 scroll 事件，用时间戳窗口区分：定位后 150ms 内的 scroll
+// 视为自动滚动，不进入浏览模式。滚轮、触摸、拖动滚动条产生的 scroll 都会进入。
+let lyricBrowseTimer = null;
+const LYRIC_BROWSE_RESTORE_MS = 1600;
+
+function enterLyricBrowse() {
+  const box = document.getElementById('lyricsContainer');
+  if (!box) return;
+  box.classList.add('lyrics-browsing');
+  clearTimeout(lyricBrowseTimer);
+  lyricBrowseTimer = setTimeout(() => box.classList.remove('lyrics-browsing'), LYRIC_BROWSE_RESTORE_MS);
+}
+
+(function setupLyricBrowse() {
+  const box = document.getElementById('lyricsContainer');
+  if (!box) return;
+  box.addEventListener('scroll', () => {
+    if (performance.now() - lyricAutoScrollAt < 150) return;   // 程序定位引发的滚动
+    enterLyricBrowse();
+  }, { passive: true });
+})();
 
 // ========== 落点二次校正 ==========
 // 视口外的歌词行按 contain-intrinsic-size 的估值布局（performance.css 统一设为
@@ -410,6 +480,7 @@ function correctLyricCenter() {
 
   const prevBehavior = box.style.scrollBehavior;
   box.style.scrollBehavior = 'auto';
+  lyricAutoScrollAt = performance.now();
   box.scrollTop = Math.max(0, box.scrollTop + delta);
   box.style.scrollBehavior = prevBehavior;
 }
@@ -428,6 +499,7 @@ function alignLyricsToActive() {
 
   const prevBehavior = box.style.scrollBehavior;
   box.style.scrollBehavior = 'auto';
+  lyricAutoScrollAt = performance.now();
   box.scrollTop = Math.max(0, box.scrollTop + delta);
   box.style.scrollBehavior = prevBehavior;
   // 瞬时定位同样会因行重排产生几像素偏差，下一帧再校正一次
@@ -491,6 +563,8 @@ function renderLyrics() {
   currentLyrics.forEach((line, idx) => {
     const row = document.createElement('div');
     row.className = 'lyric-line-container';
+    // 初始聚焦第一行；载入后 updateLyricHighlight 会按实际播放位置改写
+    row.style.setProperty('--dist', String(idx));
     // 点击跳转：由闭包直接捕获下标，无需再用 data-* 属性供选择器定位
     row.addEventListener('click', () => jumpToLyric(idx));
 
@@ -532,6 +606,7 @@ function renderLyrics() {
     // 译文行置于行容器内部：行的缩放与透明度状态会自然作用于译文行，无需再用 nextElementSibling 兜底
     let translateEl = null;
     if (line.translate) {
+      row.classList.add('has-translate');   // 带翻译的行用更紧凑的行距
       translateEl = document.createElement('div');
       translateEl.className = 'lyric-translate';
       translateEl.textContent = line.translate;
@@ -555,7 +630,7 @@ function jumpToLyric(index) {
   const t = currentLyrics[index].startTime;
   if (isFinite(t)) {
     audio.currentTime = t;
-    audio.play().catch(err=>{ console.warn('play() 被中断：', err.name); }); isPlaying = true; updateBtn();
+    playWithFade();   // 跳转后从静音淡入（已在播放则音量不变）
   }
 }
 
@@ -596,7 +671,15 @@ function setWordFill(row, idx, fill) {
   const v = fill <= 0 ? 0 : (fill >= 1 ? 1 : fill);
   if (w.lastFill === v) return;
   w.lastFill = v;
-  w.fg.style.setProperty('--fill', v);
+  // --fill 写在 wrapper 上，bg 的裁剪与 fg 的宽度共用同一变量，逐帧同步推进
+  w.wrapper.style.setProperty('--fill', v);
+  // 已开始高亮（已唱/正在唱）的字词标记出来，CSS 让其相对未唱字词微微上移；
+  // 仅在状态翻转时写类，避免逐帧重复操作 DOM
+  const started = v > 0;
+  if (w.started !== started) {
+    w.started = started;
+    w.wrapper.classList.toggle('word-started', started);
+  }
 }
 
 function setLineFill(row, ct) {
@@ -654,6 +737,7 @@ function updateLyricHighlight() {
     }
 
     activeLineIdx = lineIdx;
+    updateLyricFocus(Math.max(0, lineIdx));   // 聚焦梯度随当前行迁移
     const row = lineIdx >= 0 ? lyricRows[lineIdx] : null;
 
     if (row) {

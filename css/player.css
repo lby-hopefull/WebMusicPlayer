@@ -130,10 +130,12 @@
 /* ========== 进度条与音量条 ========== */
 /* 已播放段与未播放段由轨道的两层背景绘制（底色 + 渐变层），
    两者同高同圆角，非整数缩放/DPR 下不会各自取整而出现粗细差。
-   滑块本身不绘制（轨道已足够细），但仍保留可抓取区域；
-   因此填充宽度直接取轨道宽度的百分比：--fill-ratio 由 syncRangeFill() 写入。 */
+   滑块始终透明（不显示圆点），仅保留可抓取区域。
+   填充宽度取轨道宽度的百分比：进度为 0 时填充宽度为 0，整条轨道呈灰色。
+   --fill-ratio 由 syncRangeFill() 写入。 */
 input[type="range"] {
   --range-thickness: 5px;
+  --range-thumb: 14px;
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
@@ -155,11 +157,11 @@ input[type="range"]::-webkit-slider-runnable-track {
   background-size: calc(100% * var(--fill-ratio, 0)) 100%;
 }
 
-/* 滑块不可见，但保留抓取区域，拖动与点击跳转不受影响 */
+/* 滑块始终透明，仅保留抓取区域，拖动与点击跳转不受影响 */
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: var(--range-thumb);
+  height: var(--range-thumb);
   border: 0;
   border-radius: 50%;
   background: transparent;
@@ -178,9 +180,10 @@ input[type="range"]::-moz-range-progress {
   background: var(--color-primary);
 }
 
+/* Firefox 滑块同样始终透明，仅保留抓取区域 */
 input[type="range"]::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: var(--range-thumb);
+  height: var(--range-thumb);
   border: 0;
   border-radius: 50%;
   background: transparent;
@@ -283,6 +286,9 @@ input[type="range"]::-moz-range-thumb {
 
 /* 第二页：播放队列 */
 #player-page-queue {
+  /* 恰好一屏高：列表在内部滚动，底部留白（导航预留）始终生效，
+     避免 min-height 随内容长高导致最后一行伸到胶囊导航下方 */
+  height: 100%;
   padding-top: var(--spacing-2xl);
   /* 与封面页同一条宽度上限，宽屏下居中显示 */
   width: 100%;
@@ -291,6 +297,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .queue-header {
+  flex: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -311,7 +318,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #playlist {
-  max-height: calc(100% - 60px);
+  /* 填充队列页剩余高度（扣除底部导航预留），内部滚动；
+     min-height:0 允许 flex 子项收缩，最后一行始终停在导航上方 */
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   border: 1px solid var(--surface-border);
   border-radius: var(--radius-md);
@@ -521,22 +531,21 @@ input[type="range"]::-moz-range-thumb {
 .lyric-line-container {
   padding: var(--spacing-md) 0;
   cursor: pointer;
-  opacity: 0.5;
-  transform: scale(1);
-  transition: transform var(--transition-base),
-              opacity var(--transition-base);
   word-break: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
 }
 
-.lyric-line-container.sung-line {
-  opacity: 0.7;
+/* 带翻译的行本身已有译文占位，行距收紧；不带翻译的行保持舒适间距 */
+.lyric-line-container.has-translate {
+  padding: var(--spacing-xs) 0;
 }
 
 .lyric-line-container.active-line {
   opacity: 1;
-  transform: scale(1.03);
+  /* 当前行持续放大（非弹跳）：成为当前行时经 transform 过渡平滑放大到此值并保持，
+     换行后失去 .active-line 再平滑恢复原始尺寸 */
+  transform: scale(1.08);
   /* 当前播放行加粗：字重施加在行容器上，整行歌词与逐字行统一处理。
      逐字行的两层文字（未唱段与已唱段）继承同一字重，填充裁剪仍与字形对齐 */
   font-weight: var(--font-weight-bold);
@@ -572,7 +581,11 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .lyric-word-bg {
+  display: inline-block;
   color: var(--color-text-tertiary);
+  /* 隐藏被高亮 fg 层覆盖的已唱部分，只露出未唱部分；与 fg 宽度共用 wrapper 上的
+     --fill，由 rAF 逐帧同步推进，灰/彩边界平滑衔接（不加 transition 以免两层错步） */
+  clip-path: inset(0 0 0 calc(var(--fill, 0) * 100%));
 }
 
 .lyric-word-fg {
@@ -611,7 +624,7 @@ input[type="range"]::-moz-range-thumb {
   color: var(--color-text-tertiary);
   font-size: var(--lyric-translate-font-size);
   margin-top: var(--spacing-xs);
-  margin-bottom: var(--spacing-2xl);
+  margin-bottom: var(--spacing-md);
   font-style: italic;
   transition: color var(--transition-base);
 }

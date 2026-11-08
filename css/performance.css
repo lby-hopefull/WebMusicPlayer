@@ -26,9 +26,9 @@
 /* 2. 减少重绘区域 */
 .lyric-line-container.active-line {
   /* 使用 transform scale 而非修改尺寸 */
-  /* transform: scale(1.03); 已在 player.css 中定义 */
+  /* transform: scale(1.08); 已在 player.css 中定义 */
   /* 启用独立合成层 */
-  transform: scale(1.03) translateZ(0);
+  transform: scale(1.08) translateZ(0);
 }
 
 /* 3. 优化进度条填充动画 */

@@ -74,10 +74,9 @@ async function renderManageList() {
     if (isCached) {
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
-      const delText = document.createElement('span');
-      delText.textContent = '删除';
-      delBtn.append(iconEl('trash3'), delText);
+      delBtn.append(iconEl('trash3'));   // 仅图标，文字由 aria-label 提供
       delBtn.setAttribute('aria-label', `删除 ${song} 的缓存`);
+      delBtn.title = `删除 ${song} 的缓存`;
       delBtn.addEventListener('click', () => deleteSingleCache(song));
       item.appendChild(delBtn);
     }
@@ -105,24 +104,35 @@ function toggleSongSelection(idx) {
   updateSelectedCount();
 }
 
-function selectAllSongs() {
-  document.querySelectorAll('#manageSongList input[type=checkbox]').forEach(cb => {
-    cb.checked = true;
-    selectedSongs.add(parseInt(cb.value));
-  });
+// 全选/取消全选合并为一个切换按钮：已全选则清空，否则全选
+function toggleSelectAll() {
+  const boxes = [...document.querySelectorAll('#manageSongList input[type=checkbox]')];
+  const allSelected = boxes.length > 0 && boxes.every(cb => cb.checked);
+  if (allSelected) {
+    boxes.forEach(cb => { cb.checked = false; });
+    selectedSongs.clear();
+  } else {
+    boxes.forEach(cb => { cb.checked = true; selectedSongs.add(parseInt(cb.value)); });
+  }
   updateSelectedCount();
 }
 
-function deselectAllSongs() {
-  document.querySelectorAll('#manageSongList input[type=checkbox]').forEach(cb => {
-    cb.checked = false;
-  });
-  selectedSongs.clear();
-  updateSelectedCount();
+// 全选按钮状态同步：已全选时打勾（与歌曲勾选框一致），并更新无障碍名
+function updateSelectAllButton() {
+  const btn = document.getElementById('toggleSelectBtn');
+  if (!btn) return;
+  const boxes = [...document.querySelectorAll('#manageSongList input[type=checkbox]')];
+  const allSelected = boxes.length > 0 && boxes.every(cb => cb.checked);
+  btn.classList.toggle('is-checked', allSelected);
+  btn.setAttribute('aria-pressed', allSelected ? 'true' : 'false');
+  const text = allSelected ? '取消全选' : '全选';
+  btn.setAttribute('aria-label', text);
+  btn.title = text;
 }
 
 function updateSelectedCount() {
   document.getElementById('selectedCount').textContent = `已选择： ${selectedSongs.size}`;
+  updateSelectAllButton();
 }
 
 function updateCachedCount() {
@@ -137,14 +147,6 @@ async function downloadSelected() {
   
   const songsToDownload = Array.from(selectedSongs).map(idx => tracks[idx]);
   await batchDownload(songsToDownload);
-}
-
-async function downloadAll() {
-  if(tracks.length === 0) {
-    await uiAlert('没有歌曲可下载');
-    return;
-  }
-  await batchDownload([...tracks]);
 }
 
 async function batchDownload(songs) {
@@ -198,7 +200,7 @@ async function batchDownload(songs) {
   renderManageList();
   
   setTimeout(() => {
-    container.style.display = 'none';
+    fadeOutHide(container);
   }, 2000);
   
   if (completed === total) {
@@ -376,7 +378,7 @@ async function handleLocalFolder(event){
   renderPlaylist();
   
   setTimeout(() => {
-    progressContainer.style.display = 'none';
+    fadeOutHide(progressContainer);
   }, 2000);
   
   if(total === 0){

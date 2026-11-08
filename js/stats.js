@@ -33,5 +33,9 @@ async function renderStats(){
     div.append(nameSpan, countSpan);
     d.appendChild(div);
   });
+  // 统计页可见时的重渲染（切到本页、播放计数更新）播一次级联入场
+  if(document.getElementById('page-stats').classList.contains('active')){
+    staggerChildren(d);
+  }
 }
 

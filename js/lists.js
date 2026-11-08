@@ -54,7 +54,9 @@ async function showAddSongsDialog(listName){
   const existingSongs = lists[listName] || [];
   allSongsCache = lists['全部歌曲'] || tracks;
 
-  dialog.showModal();
+  // 上一次关闭还在播出场动画时先等它落幕，否则对已 open 的对话框再调 showModal 会抛错
+  if(dialog._closing) await dialog._closing;
+  if(!dialog.open) dialog.showModal();
   // 弹窗内的排序组件与歌曲列表页共用同一份状态，打开时先对齐显示
   syncListSortControls();
   renderDialogSongList(existingSongs);
@@ -77,8 +79,10 @@ function renderDialogSongList(checkedSongs){
   }
 
   container.replaceChildren();
-  sortSongEntriesForView(allSongsCache, listSortKey, listSortDir).forEach(({song,index})=>{
+  sortSongEntriesForView(allSongsCache, listSortKey, listSortDir).forEach(({song,index},i)=>{
     const label=document.createElement('label');
+    // 弹窗打开/重排时的行级联入场序号（见 animations.css）
+    label.style.setProperty('--i', String(Math.min(i,13)));
     const cb=document.createElement('input');
     cb.type='checkbox';
     cb.value=String(index);
@@ -110,7 +114,8 @@ async function confirmAddSongs(){
 }
 
 function closeDialog(){
-  document.getElementById('songDialog').close();
+  // 播出场动画后再真正关闭（见 js/animate.js）
+  return closeDialogAnimated(document.getElementById('songDialog'));
 }
 
 async function deleteSongFromList(listName,idx){
@@ -123,6 +128,23 @@ async function deleteList(name){
   if(name==='全部歌曲') return;
   // 删掉整个歌单是不可逆的，加一道确认
   if(!(await uiConfirm(`确定删除歌单「${name}」吗？`))) return;
+  // 先播收起动画再删数据：整卡高度与透明度归零后才重渲染
+  const wrap=[...document.querySelectorAll('#customLists .list')]
+    .find(w=>w.querySelector('.list-title span') && w.querySelector('.list-title span').textContent===name);
+  if(wrap && !prefersReducedMotion()){
+    wrap.style.overflow='hidden';
+    const h=wrap.offsetHeight;
+    await new Promise(resolve=>{
+      const anim=wrap.animate(
+        [{height:h+'px',opacity:'1',marginTop:getComputedStyle(wrap).marginTop},
+         {height:'0px',opacity:'0',marginTop:'0px'}],
+        // forwards：数据删除与重渲染完成前保持收起终帧
+        {duration:280,easing:'cubic-bezier(.4,0,.7,.2)',fill:'forwards'});
+      anim.onfinish=resolve;
+      anim.oncancel=resolve;
+      setTimeout(resolve,350);
+    });
+  }
   const lists=await loadLists();
   delete lists[name];
   await saveLists(lists);
@@ -156,9 +178,11 @@ async function renderLists(){
     return a.localeCompare(b,'zh-CN',{numeric:true});
   });
 
-  names.forEach(k=>{
+  names.forEach((k,listIdx)=>{
     const wrap=document.createElement('div');
     wrap.className='list';
+    // 页面入场时按序号级联上升（见 animations.css 的 page-enter 规则）
+    wrap.style.setProperty('--i', String(Math.min(listIdx,10)));
 
     const title=document.createElement('div');
     title.className='list-title';
@@ -225,17 +249,22 @@ async function renderLists(){
       ul.appendChild(item);
     });
 
-    // 展开状态：重渲染后按记录恢复；箭头方向、aria 状态与实际展开情况一致
-    const setExpanded=(expanded)=>{
+    // 展开状态：重渲染后按记录恢复；箭头方向、aria 状态与实际展开情况一致。
+    // 用户点击触发的切换带高度动画；渲染时的状态恢复直接到位，不播动画
+    const setExpanded=(expanded,animate=false)=>{
       wrap.classList.toggle('expanded', expanded);
-      ul.style.display = expanded ? 'block' : 'none';
       expandBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       expandBtn.setAttribute('aria-label', `${expanded?'收起':'展开'}歌单 ${k}`);
       if(expanded) expandedLists.add(k); else expandedLists.delete(k);
+      if(animate){
+        expandCollapse(ul, expanded);
+      }else{
+        ul.style.display = expanded ? 'block' : 'none';
+      }
     };
     setExpanded(expandedLists.has(k));
 
-    const toggle=()=>setExpanded(!wrap.classList.contains('expanded'));
+    const toggle=()=>setExpanded(!wrap.classList.contains('expanded'), true);
     // 箭头自行拦截事件，避免与标题的展开 / 收起重复触发
     expandBtn.addEventListener('click',e=>{ e.stopPropagation(); toggle(); persistExpandedLists(); });
     title.addEventListener('click',()=>{ toggle(); persistExpandedLists(); });
@@ -243,6 +272,12 @@ async function renderLists(){
     wrap.appendChild(ul);
     div.appendChild(wrap);
   });
+
+  // 页面可见时的重渲染（新建/删除歌单、排序变化）播一次级联入场；
+  // 页面隐藏时渲染不做动画，等 showPage 的 page-enter 统一播
+  if(document.getElementById('page-lists').classList.contains('active')){
+    staggerChildren(div);
+  }
 }
 
 // 从歌单点歌：队列取自该歌单的当前顺序，显示顺序即播放顺序，起点为被点击的那一首

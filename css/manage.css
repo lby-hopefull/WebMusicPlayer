@@ -1,13 +1,23 @@
 /* ========== 音乐管理页面 ========== */
 /* 这一页嵌在设置页的「音乐管理」分组里，因此不再自带页面级 padding。 */
 
-/* 操作按钮区 */
+/* 工具栏：操作行 + 状态行共用同一个底色矩形容器 */
+.manage-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--surface-1);
+  border-radius: var(--radius-sm);
+}
+
+/* 操作按钮区（容器内的一行，自身不再带底色） */
 .manage-actions {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
   flex-wrap: wrap;
-  margin-bottom: var(--spacing-lg);
 }
 
 .manage-actions button {
@@ -17,6 +27,16 @@
   padding: var(--spacing-sm) var(--spacing-lg);
   font-size: var(--font-size-sm);
   white-space: nowrap;
+}
+
+/* 刷新按钮按压时缩小、松开恢复 */
+.manage-actions #refreshListBtn:active:not(:disabled) {
+  transform: scale(.9);
+}
+
+/* 清理缓存 / 删除推到操作行最右侧 */
+.manage-actions #clearCacheBtn {
+  margin-left: auto;
 }
 
 /* 功能按钮类：背景与其他按钮同为半透明底，仅以前景色区分语义 */
@@ -32,17 +52,68 @@
   color: var(--color-success);
 }
 
-/* 已选择 / 已缓存 状态条 */
+/* 已选择 / 已缓存 状态行（容器内的一行，自身不再带底色）：全选 + 计数，右侧排序 */
 .manage-info {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-sm);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-lg);
-  padding: var(--spacing-md);
-  background: var(--surface-1);
+}
+
+/* 全选：与下方歌曲勾选框同款外观（方框 + 勾选标记），选中时打勾 */
+.manage-info #toggleSelectBtn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  flex: none;
+  display: inline-grid;
+  place-content: center;
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.manage-info #toggleSelectBtn::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  transform: scale(0);
+  transition: transform .22s cubic-bezier(.34, 1.56, .64, 1);
+  background-color: var(--color-primary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 8.6 6.2 12.2 13.4 4.6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 8.6 6.2 12.2 13.4 4.6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.manage-info #toggleSelectBtn:hover:not(:disabled) {
+  background: var(--surface-3);
+  transform: none;
+}
+
+.manage-info #toggleSelectBtn.is-checked {
+  border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+  background: var(--surface-3);
+}
+
+.manage-info #toggleSelectBtn.is-checked::before {
+  transform: scale(1);
+}
+
+/* 右侧组整体推到行尾：排序组件 */
+.manage-info-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+/* 行内排序组件去掉独立卡片底色与外边距，融入状态条 */
+.manage-info .sort-bar {
+  margin-bottom: 0;
+  padding: 0;
+  background: transparent;
 }
 
 /* ========== 歌曲列表（扁平） ========== */
@@ -58,13 +129,10 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-xs);
-  border-bottom: 1px solid var(--surface-border);
+  /* 左右留边距 + 圆角，悬停高亮成圆润卡片（与统计页一致） */
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
   transition: background var(--transition-base);
-}
-
-.manage-song-item:last-child {
-  border-bottom: none;
 }
 
 .manage-song-item:hover {
@@ -133,12 +201,19 @@
 
 .manage-song-item button {
   flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-xs);
+  justify-content: center;
+  border-radius: var(--radius-sm);
   color: var(--color-danger);
+}
+
+/* 删除图标略大于原始尺寸、与勾选框勾号接近 */
+.manage-song-item button .icon {
+  font-size: 14px;
 }
 
 /* ========== 导入 / 下载进度 ========== */

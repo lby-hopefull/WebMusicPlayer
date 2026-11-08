@@ -22,12 +22,14 @@
 <link rel="stylesheet" href="css/settings.css">
 <link rel="stylesheet" href="css/responsive.css">
 <link rel="stylesheet" href="css/performance.css">
+<link rel="stylesheet" href="css/animations.css">
 
 <!-- 全部脚本加 defer：并行下载、按此处的声明顺序执行，且都等到 DOM 解析完成之后才运行。
      依赖顺序由这里显式声明，init.js 也不必再自行等待 DOMContentLoaded。 -->
 <script defer src="js/jsmediatags.min.js"></script>
 <script defer src="js/color-thief.min.js"></script>
 <script defer src="js/app.js"></script>
+<script defer src="js/animate.js"></script>
 <script defer src="js/db.js"></script>
 <script defer src="js/songmeta.js"></script>
 <script defer src="js/ui.js"></script>
@@ -279,59 +281,51 @@
         <svg class="icon section-chevron" aria-hidden="true"><use href="#chevron-right"/></svg>
       </summary>
       <div class="settings-section-content">
-        <div class="manage-actions">
-          <button id="refreshListBtn" type="button">
-            <svg class="icon" aria-hidden="true"><use href="#arrow-repeat"/></svg>
-            刷新
-          </button>
-          <button id="addFolderBtn" type="button" class="btn-success">
-            <svg class="icon" aria-hidden="true"><use href="#folder2-open"/></svg>
-            添加文件夹
-          </button>
-          <input type="file" id="localFolderInput" webkitdirectory directory multiple style="display:none;">
-          <button id="selectAllBtn" type="button">
-            <svg class="icon" aria-hidden="true"><use href="#check2-square"/></svg>
-            全选
-          </button>
-          <button id="deselectAllBtn" type="button">
-            <svg class="icon" aria-hidden="true"><use href="#square"/></svg>
-            取消全选
-          </button>
-          <button id="downloadSelectedBtn" type="button">
-            <svg class="icon" aria-hidden="true"><use href="#download"/></svg>
-            下载选中
-          </button>
-          <button id="downloadAllBtn" type="button">
-            <svg class="icon" aria-hidden="true"><use href="#cloud-download"/></svg>
-            全部下载
-          </button>
-          <button id="deleteSelectedBtn" type="button" class="btn-danger">
-            <svg class="icon" aria-hidden="true"><use href="#trash3"/></svg>
-            删除
-          </button>
-          <button id="clearCacheBtn" type="button" class="btn-warning">
-            <svg class="icon" aria-hidden="true"><use href="#eraser"/></svg>
-            清理缓存
-          </button>
-        </div>
+        <div class="manage-toolbar">
+          <div class="manage-actions">
+            <button id="refreshListBtn" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#arrow-repeat"/></svg>
+              刷新
+            </button>
+            <button id="addFolderBtn" type="button" class="btn-success">
+              <svg class="icon" aria-hidden="true"><use href="#folder2-open"/></svg>
+              添加文件夹
+            </button>
+            <input type="file" id="localFolderInput" webkitdirectory directory multiple style="display:none;">
+            <button id="downloadSelectedBtn" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#download"/></svg>
+              下载选中
+            </button>
+            <button id="clearCacheBtn" type="button" class="btn-warning">
+              <svg class="icon" aria-hidden="true"><use href="#eraser"/></svg>
+              清理缓存
+            </button>
+            <button id="deleteSelectedBtn" type="button" class="btn-danger">
+              <svg class="icon" aria-hidden="true"><use href="#trash3"/></svg>
+              删除选中
+            </button>
+          </div>
 
-        <div class="manage-info">
-          <span id="selectedCount">已选择： 0</span>
-          <span id="cachedCount">已缓存： 0</span>
-        </div>
-
-        <div class="sort-bar">
-          <label for="manageSortKey">排序：</label>
-          <select id="manageSortKey" aria-label="管理列表排序方式">
-            <option value="name">名称</option>
-            <option value="duration">时长</option>
-            <option value="addedTime">添加时间</option>
-            <option value="size">大小</option>
-          </select>
-          <select id="manageSortDir" aria-label="管理列表排序方向">
-            <option value="asc">升序</option>
-            <option value="desc">降序</option>
-          </select>
+          <div class="manage-info">
+            <button id="toggleSelectBtn" type="button" aria-pressed="false" aria-label="全选" title="全选"></button>
+            <span id="selectedCount">已选择： 0</span>
+            <span id="cachedCount">已缓存： 0</span>
+            <div class="manage-info-right">
+              <div class="sort-bar">
+                <label for="manageSortKey">排序：</label>
+                <select id="manageSortKey" aria-label="管理列表排序方式">
+                  <option value="name">名称</option>
+                  <option value="duration">时长</option>
+                  <option value="addedTime">添加时间</option>
+                  <option value="size">大小</option>
+                </select>
+                <select id="manageSortDir" aria-label="管理列表排序方向">
+                  <option value="asc">升序</option>
+                  <option value="desc">降序</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="progress-container" id="progressContainer" style="display: none;">

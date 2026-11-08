@@ -30,9 +30,15 @@ async function playTrack(i){
   const name=currentQueue[i];
   
   trackedSongs[name] = false;
-  
-  // 切歌前先显式暂停，避免旧的 play() promise 被 AbortError 打断
+  pausing = false;   // 新曲目接管，取消旧的淡出暂停意图
+
+  // 切歌前先把旧曲淡出再显式暂停，避免硬切爆音与 play() promise 被打断
+  if(!audio.paused && audio.src){
+    await new Promise(res => rampVolume(0, 160, res));
+    if(seq !== playTrack._seq) return;   // 淡出期间又有新切换
+  }
   try{ audio.pause(); }catch(e){}
+  audio.volume = 0;   // 新曲从静音淡入
   let audioUrl;
   const cached=await getMusic(name);
   if(seq !== playTrack._seq) return; // await 期间又有新切换
@@ -61,6 +67,7 @@ async function playTrack(i){
   // play() 返回 promise，此处捕获 AbortError 等中断，避免影响自动切歌
   audio.play().catch(err=>{ console.warn('play() 被中断：', err.name); });
   isPlaying=true;updateBtn();highlight();
+  rampVolume(targetVolume(), 380);   // 新曲从静音淡入
 
   // 预加载下一首
   preloadNextSong();
@@ -76,24 +83,101 @@ async function playTrack(i){
 
 function togglePlayPause(){
   if(!audio.src)return;
-  // 以音频真实状态为准，避免连点后 isPlaying 标志与实际不同步
-  if(audio.paused){
-    audio.play().catch(err=>{ console.warn('play() 被中断：', err.name); });
-    isPlaying=true;
+  // 淡出途中再点视为「继续」，把音量淡回；其余按音频真实状态切换
+  if(pausing || audio.paused){
+    playWithFade();
   }else{
-    audio.pause();
-    isPlaying=false;
+    pauseWithFade();
   }
-  updateBtn();
-  updateMediaSessionPlaybackState(); 
 }
 
 function updateBtn(){
   const btn = domCache.playPauseBtn || document.getElementById('playPauseBtn');
   // 图标取自全局 sprite：播放与暂停只是换 <use> 的指向，不动按钮的其他结构
-  setIcon(btn.querySelector('svg'), isPlaying?'pause-fill':'play-fill');
+  const svg = btn.querySelector('svg');
+  setIcon(svg, isPlaying?'pause-fill':'play-fill');
+  // 图标换向时弹跳一次；播放状态挂到 body 上，驱动主按钮光环与队列均衡器
+  restartAnimation(svg, 'icon-pop');
+  document.body.classList.toggle('is-playing', isPlaying);
   // 按钮内容只有在变化时才需要同步无障碍名
   btn.setAttribute('aria-label', isPlaying?'暂停':'播放');
+}
+
+// 系统媒体面板、自动切歌等路径不经过 updateBtn，播放状态以音频事件为准兜底
+audio.addEventListener('play', () => document.body.classList.add('is-playing'));
+audio.addEventListener('pause', () => document.body.classList.remove('is-playing'));
+audio.addEventListener('ended', () => document.body.classList.remove('is-playing'));
+
+// ========== 音量淡入淡出 ==========
+// 暂停先把音量缓降到 0 再真正 pause，继续从 0 缓升回用户设定值，避免硬切爆音。
+// 用 setInterval 按时间插值而非 rAF：后台标签页 rAF 停摆，定时器虽被节流仍会触发，
+// 淡变能在后台走完，不会卡在半音量一直播放。
+let volumeTimer = null;
+let volumeRampDone = null;
+let pausing = false;   // 正在淡出暂停途中
+
+function targetVolume() {
+  const el = domCache.volumeSlider || document.getElementById('volumeSlider');
+  return el ? Math.min(1, Math.max(0, Number(el.value) / 100)) : 1;
+}
+
+// 取消当前淡变并立即兑现其回调（调用方靠 pausing / seq 守卫决定是否继续）
+function cancelVolumeRamp() {
+  if (volumeTimer !== null) { clearInterval(volumeTimer); volumeTimer = null; }
+  if (volumeRampDone) { const d = volumeRampDone; volumeRampDone = null; d(); }
+}
+
+function rampVolume(to, duration, done) {
+  cancelVolumeRamp();
+  const from = audio.volume;
+  to = Math.min(1, Math.max(0, to));
+  if (prefersReducedMotion() || duration <= 0 || from === to) {
+    audio.volume = to;
+    if (done) done();
+    return;
+  }
+  volumeRampDone = done || null;
+  const start = performance.now();
+  volumeTimer = setInterval(() => {
+    const p = Math.min(1, (performance.now() - start) / duration);
+    // easeInOutQuad：起步与收尾都缓冲
+    const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    audio.volume = Math.min(1, Math.max(0, from + (to - from) * e));
+    if (p >= 1) {
+      clearInterval(volumeTimer); volumeTimer = null;
+      volumeRampDone = null;
+      if (done) done();
+    }
+  }, 16);
+}
+
+// 继续播放：从静音淡入到用户音量（淡出途中调用则把音量淡回）
+function playWithFade() {
+  pausing = false;
+  if (audio.paused) {
+    audio.volume = 0;
+    audio.play().catch(err => { console.warn('play() 被中断：', err.name); });
+  }
+  isPlaying = true;
+  updateBtn();
+  updateMediaSessionPlaybackState();
+  rampVolume(targetVolume(), 320);
+}
+
+// 暂停：先淡出到静音再真正 pause
+function pauseWithFade() {
+  if (audio.paused || pausing) return;
+  pausing = true;
+  const srcAtPause = audio.src;
+  rampVolume(0, 240, () => {
+    // 淡出途中若被「继续」或切歌取消，则不再暂停
+    if (!pausing || audio.src !== srcAtPause) return;
+    audio.pause();
+    isPlaying = false;
+    pausing = false;
+    updateBtn();
+    updateMediaSessionPlaybackState();
+  });
 }
 
 async function playNext(){
@@ -128,7 +212,7 @@ async function reshuffleAndRestart(){
   }
   currentTrack = 0;
   await dbPut('currentList', 'queue', currentQueue);
-  renderPlaylist();
+  renderPlaylist(true);
   await playTrack(0);
 }
 
@@ -159,6 +243,44 @@ audio.addEventListener('timeupdate',()=>{
     }
   }
 });
+
+// 点击滑块跳转：填充段平滑滑到目标位置；拖动拇指时跟手不滞后。
+// pointerdown 先启用平滑过渡（点击跳转的 input 紧随其后），一旦指针移动超过阈值
+// 判定为拖动则移除过渡跟手；松手后保留过渡到 glide 结束再撤，避免中途换缓动。
+// 进度条与音量条共用同一套逻辑。
+let seekGlideTimer = null;
+function glideProgressFill() {
+  const bar = domCache.progressBar || document.getElementById('progressBar');
+  if (!bar) return;
+  bar.classList.add('smooth-seek');
+  clearTimeout(seekGlideTimer);
+  seekGlideTimer = setTimeout(() => bar.classList.remove('smooth-seek'), 450);
+}
+
+function setupSmoothSeek(bar) {
+  if (!bar) return;
+  let startX = null;
+  let glideTimer = null;
+  bar.addEventListener('pointerdown', e => {
+    startX = e.clientX;
+    clearTimeout(glideTimer);
+    bar.classList.add('smooth-seek');
+  });
+  bar.addEventListener('pointermove', e => {
+    if (startX !== null && Math.abs(e.clientX - startX) > 4) {
+      bar.classList.remove('smooth-seek');   // 进入拖动，关闭过渡跟手
+    }
+  });
+  const end = () => {
+    startX = null;
+    clearTimeout(glideTimer);
+    glideTimer = setTimeout(() => bar.classList.remove('smooth-seek'), 450);
+  };
+  bar.addEventListener('pointerup', end);
+  bar.addEventListener('pointercancel', end);
+}
+setupSmoothSeek(document.getElementById('progressBar'));
+setupSmoothSeek(document.getElementById('volumeSlider'));
 
 document.getElementById('progressBar').addEventListener('input',function(){
   if(audio.duration)audio.currentTime=(this.value/100)*audio.duration;
@@ -256,7 +378,7 @@ document.addEventListener('click', e=>{
   if(dragSuppressClick){ e.stopPropagation(); e.preventDefault(); }
 }, true);
 
-function renderPlaylist(){
+function renderPlaylist(animate){
   const box = domCache.playlist || document.getElementById('playlist');
   box.replaceChildren();
   if(currentQueue.length === 0) {
@@ -269,6 +391,8 @@ function renderPlaylist(){
   currentQueue.forEach((t,i)=>{
     const d=document.createElement('div');
     d.className='song';
+    // 页面入场级联动画的序号（见 animations.css 的 page-enter 规则）
+    d.style.setProperty('--i', String(Math.min(i,13)));
     if(i===currentTrack)d.classList.add('playing');
     const nameSpan=document.createElement('span');
     nameSpan.textContent=t;
@@ -278,6 +402,12 @@ function renderPlaylist(){
     d.appendChild(nameSpan);
     // 统一使用 addEventListener 而非 onclick 属性：便于解绑，也不与内联写法混用
     d.addEventListener('click',()=>playTrack(i));
+    // 当前播放项的均衡器：仅 .playing 行可见，body.is-playing 时跳动
+    const eq=document.createElement('span');
+    eq.className='eq';
+    eq.setAttribute('aria-hidden','true');
+    for(let b=0;b<3;b++) eq.appendChild(document.createElement('i'));
+    d.appendChild(eq);
     // 右侧拖动排序把手
     const handle=document.createElement('span');
     handle.className='drag-handle';
@@ -288,6 +418,11 @@ function renderPlaylist(){
     attachDragSort(box, d, handle, i);
     box.appendChild(d);
   });
+  // 洗牌等「队列顺序本身变了」的场景播一次级联入场；
+  // 切歌高亮、拖动落地等日常重渲染不播，避免列表反复闪动
+  if(animate && document.getElementById('page-player').classList.contains('active')){
+    staggerChildren(box);
+  }
 }
 
 // 长按拖动手动排序（鼠标与触摸通用）
@@ -315,19 +450,39 @@ function attachDragSort(box, item, handle, index){
   async function finishDrag(){
     const dragEl=document.querySelector('.song.dragging');
     const ph=document.querySelector('.drag-placeholder');
+    let newIndex=-1;
     if(dragEl && ph){
       // 新位置 = 剔除被拖动元素后，占位符所处的索引
       const others=[...box.querySelectorAll('.song')].filter(el=>el!==dragEl);
-      const newIndex=others.indexOf(ph);
-      if(newIndex>-1 && newIndex!==index){
-        const moved=currentQueue.splice(index,1)[0];
-        currentQueue.splice(newIndex,0,moved);
-        // 保持正在播放的歌曲跟随移动
-        if(currentTrack===index) currentTrack=newIndex;
-        else if(index<currentTrack && newIndex>=currentTrack) currentTrack--;
-        else if(index>currentTrack && newIndex<=currentTrack) currentTrack++;
-        await dbPut('currentList','queue',currentQueue);
+      newIndex=others.indexOf(ph);
+    }
+    // 放下动画：浮层缓动滑回占位符（目标槽位）再重排，避免瞬移落位
+    if(dragEl && ph && !prefersReducedMotion()){
+      // 测量前把浮层缩放归位并关闭过渡：dragging 的 scale 会改变 getBoundingClientRect，
+      // 直接用缩放后的 rect 算落点会引入水平偏移，放下时表现为飘移
+      dragEl.style.transition='none';
+      dragEl.style.scale='1';
+      const ir=dragEl.getBoundingClientRect();
+      const pr=ph.getBoundingClientRect();
+      const dx=pr.left-ir.left, dy=pr.top-ir.top;
+      if(Math.abs(dx)>0.5 || Math.abs(dy)>0.5){
+        await new Promise(res=>{
+          const a=dragEl.animate(
+            [{transform:'translate(0,0)'},{transform:'translate('+dx+'px,'+dy+'px)'}],
+            {duration:220,easing:'cubic-bezier(.2,.8,.25,1)',fill:'forwards'});
+          a.onfinish=res; a.oncancel=res;
+          setTimeout(res,300);
+        });
       }
+    }
+    if(newIndex>-1 && newIndex!==index){
+      const moved=currentQueue.splice(index,1)[0];
+      currentQueue.splice(newIndex,0,moved);
+      // 保持正在播放的歌曲跟随移动
+      if(currentTrack===index) currentTrack=newIndex;
+      else if(index<currentTrack && newIndex>=currentTrack) currentTrack--;
+      else if(index>currentTrack && newIndex<=currentTrack) currentTrack++;
+      await dbPut('currentList','queue',currentQueue);
     }
     cleanup();
     renderPlaylist();
@@ -344,14 +499,27 @@ function attachDragSort(box, item, handle, index){
     // 坐标换算到包含块系：fixed 的包含块未必是视口（见 startDrag）
     item.style.top=(itemTop0 + (e.clientY-startY) - containOriginY)+'px';
     const songs=[...box.querySelectorAll('.song:not(.dragging):not(.drag-placeholder)')];
+    // FLIP：占位符换位会让其余条目瞬移，先记录位置、换位后补一段逆位移动画
+    const tops=new Map(songs.map(s=>[s,s.getBoundingClientRect().top]));
+    const place=mutate=>{
+      mutate();
+      if(prefersReducedMotion()) return;
+      for(const s of songs){
+        const dy=tops.get(s)-s.getBoundingClientRect().top;
+        if(dy) s.animate(
+          [{transform:'translateY('+dy+'px)'},{transform:'translateY(0)'}],
+          {duration:180,easing:'cubic-bezier(.2,.8,.25,1)'}
+        );
+      }
+    };
     for(const s of songs){
       const r=s.getBoundingClientRect();
       if(e.clientY < r.top + r.height/2){
-        box.insertBefore(ph, s);
+        place(()=>box.insertBefore(ph, s));
         return;
       }
     }
-    box.appendChild(ph);
+    place(()=>box.appendChild(ph));
   }
 
   let startY=0, itemTop0=0, itemLeft0=0, containOriginX=0, containOriginY=0;
@@ -465,7 +633,7 @@ async function shuffleQueue(){
   shuffleArrayInPlace(currentQueue);
   currentTrack = 0;
   await dbPut('currentList', 'queue', currentQueue);
-  renderPlaylist();
+  renderPlaylist(true);
   playTrack(0);
 }
 
@@ -510,6 +678,8 @@ async function refreshList(){
 }
 
 function setVolume(value) {
+  // 用户手动调音量时打断正在进行的淡变；若正淡出暂停，其回调会立即把暂停走完
+  cancelVolumeRamp();
   audio.volume = value / 100;
   dbPut('setting', 'volume', value);
   const v = domCache.volumeValue || document.getElementById('volumeValue');
@@ -520,6 +690,7 @@ function setVolume(value) {
 function seekBy(seconds){
   if(!audio.src || !isFinite(audio.duration)) return;
   audio.currentTime = Math.min(audio.duration, Math.max(0, audio.currentTime + seconds));
+  glideProgressFill();   // 键盘快进快退也让填充平滑滑到目标
   updateLyricHighlight(); // 暂停时 rAF 循环没在跑，手动对齐一帧
 }
 

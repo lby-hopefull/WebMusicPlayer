@@ -52,8 +52,13 @@ function createCustomSelect(select) {
   select.setAttribute('aria-hidden', 'true');
 
   let activeIndex = 0;
+  // 面板进出动画与「正在收起」标记：收起动画播完才真正隐藏，
+  // 期间 :popover-open 仍命中，isOpen 要把它视为已关闭
+  let panelAnim = null;
+  let closing = false;
 
   function isOpen() {
+    if (closing) return false;
     return supportsPopover ? list.matches(':popover-open') : !list.hidden;
   }
 
@@ -99,6 +104,8 @@ function createCustomSelect(select) {
   }
 
   function open() {
+    if (panelAnim) { panelAnim.cancel(); panelAnim = null; }
+    closing = false;
     renderList();
     if (supportsPopover) {
       if (!list.matches(':popover-open')) list.showPopover();
@@ -113,19 +120,49 @@ function createCustomSelect(select) {
     // 页面滚动或窗口尺寸变化后，触发器的位置随之改变，面板需要跟随
     window.addEventListener('scroll', positionList, true);
     window.addEventListener('resize', positionList);
+    if (!prefersReducedMotion()) {
+      // 向上弹出时从底部为原点展开，向下弹出时从顶部展开
+      const r = trigger.getBoundingClientRect();
+      const dropUp = parseFloat(list.style.top) < r.top;
+      list.style.transformOrigin = dropUp ? 'bottom left' : 'top left';
+      panelAnim = list.animate(
+        [
+          { opacity: '0', transform: 'translateY(' + (dropUp ? '4px' : '-4px') + ') scale(.97)' },
+          { opacity: '1', transform: 'translateY(0) scale(1)' }
+        ],
+        { duration: 180, easing: 'cubic-bezier(.2,.8,.3,1)' }
+      );
+    }
   }
 
   function close() {
-    if (supportsPopover) {
-      if (list.matches(':popover-open')) list.hidePopover();
-    } else {
-      list.hidden = true;
-    }
+    if (closing) return;
     trigger.setAttribute('aria-expanded', 'false');
     document.removeEventListener('pointerdown', onPointerDownOutside, true);
     document.removeEventListener('keydown', onKeydown);
     window.removeEventListener('scroll', positionList, true);
     window.removeEventListener('resize', positionList);
+    const hide = () => {
+      if (supportsPopover) {
+        if (list.matches(':popover-open')) list.hidePopover();
+      } else {
+        list.hidden = true;
+      }
+      closing = false;
+      panelAnim = null;
+    };
+    if (prefersReducedMotion()) { hide(); return; }
+    if (panelAnim) { panelAnim.cancel(); panelAnim = null; }
+    closing = true;
+    panelAnim = list.animate(
+      [
+        { opacity: '1', transform: 'translateY(0) scale(1)' },
+        { opacity: '0', transform: 'translateY(-4px) scale(.97)' }
+      ],
+      { duration: 140, easing: 'ease-in' }
+    );
+    panelAnim.onfinish = () => { if (closing) hide(); };
+    panelAnim.oncancel = () => { closing = false; };
   }
 
   function onPointerDownOutside(event) {

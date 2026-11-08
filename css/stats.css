@@ -13,14 +13,11 @@
 }
 
 #stats div {
-  padding: var(--spacing-md) 0;
-  border-bottom: 1px solid var(--surface-border);
+  /* 左右留出边距，文字不贴高亮容器边；圆角让悬停高亮成圆润卡片 */
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
   display: flex;
   justify-content: space-between;
-}
-
-#stats div:last-child {
-  border-bottom: none;
 }
 
 /* 空状态提示是普通块级元素，不跟着上面的 flex 行样式走 */

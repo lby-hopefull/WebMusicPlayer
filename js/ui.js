@@ -1,5 +1,8 @@
 // ========== 页面切换函数 ==========
 // 导航按钮的 id 与页码一一对应，当前页对应的按钮加 .active（容器与文字分别高亮）
+// 切换带方向感：往右导航时旧页向左淡出、新页从右侧滑入，反之亦然。
+// 退出动画 .15s 与 animations.css 中的 page-out-* 对应；连续快速点击时
+// 只有最后一次切换生效（pageSwitchSeq 防重入），进行中的类会被下一次切换清掉。
 
 // 防抖渲染函数
 let renderManageListTimer = null;
@@ -21,28 +24,63 @@ function debouncedRenderStats() {
   renderStatsTimer = setTimeout(() => renderStats(), 150);
 }
 
+const PAGE_ORDER = ['player', 'lists', 'stats', 'settings'];
+let pageSwitchSeq = 0;
+
 function showPage(pageName) {
-  document.querySelectorAll('.page-container > section').forEach(sec => {
-    sec.classList.remove('active');
-  });
-  document.getElementById('page-' + pageName).classList.add('active');
+  const next = document.getElementById('page-' + pageName);
+  if (!next) return;
+  const seq = ++pageSwitchSeq;
+  const current = document.querySelector('.page-container > section.active');
 
   const navId = 'nav' + pageName.charAt(0).toUpperCase() + pageName.slice(1);
   document.querySelectorAll('.navbar button').forEach(btn => {
     btn.classList.toggle('active', btn.id === navId);
   });
+  if (typeof updateNavIndicator === 'function') updateNavIndicator();
 
-  if(pageName === 'manage') {
-    debouncedRenderManageList();
-  } else if(pageName === 'lists') {
-    debouncedRenderLists();
-  } else if(pageName === 'stats') {
-    // 使用 requestIdleCallback 在空闲时渲染
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => renderStats());
-    } else {
-      debouncedRenderStats();
+  if (current === next) {
+    // 快速连点绕回本页时，本页可能还挂着上一次切换的退出类，清掉以免停在透明终帧
+    next.classList.remove('page-enter', 'page-exit', 'dir-forward', 'dir-backward');
+    return;
+  }
+
+  const forward = PAGE_ORDER.indexOf(pageName) >= PAGE_ORDER.indexOf(current ? current.id.slice(5) : pageName);
+  const reduce = prefersReducedMotion();
+  const dirClass = forward ? 'dir-forward' : 'dir-backward';
+  document.querySelectorAll('.page-container > section').forEach(sec => {
+    sec.classList.remove('page-enter', 'page-exit', 'dir-forward', 'dir-backward');
+  });
+
+  const activate = () => {
+    if (seq !== pageSwitchSeq) return;   // 已有更新的切换，放弃本次
+    if (current) current.classList.remove('active', 'page-exit', 'dir-forward', 'dir-backward');
+    next.classList.add('active');
+    if (!reduce) {
+      next.classList.add('page-enter', dirClass);
+      // 等级联入场的最后一项播完再摘类（最长约 .14s + 10*45ms + .42s）
+      setTimeout(() => next.classList.remove('page-enter', 'dir-forward', 'dir-backward'), 1100);
     }
+
+    if(pageName === 'manage') {
+      debouncedRenderManageList();
+    } else if(pageName === 'lists') {
+      debouncedRenderLists();
+    } else if(pageName === 'stats') {
+      // 使用 requestIdleCallback 在空闲时渲染
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => renderStats());
+      } else {
+        debouncedRenderStats();
+      }
+    }
+  };
+
+  if (current && !reduce) {
+    current.classList.add('page-exit', dirClass);
+    setTimeout(activate, 150);
+  } else {
+    activate();
   }
 }
 
@@ -55,6 +93,7 @@ async function adjustLyricDelay(delta) {
     const actualDelayToSave = lyricDelay;
     
     document.getElementById('lyricDelayValue').textContent = lyricDelay.toFixed(2) + 's';
+    restartAnimation(document.getElementById('lyricDelayValue'), 'value-pop');
     
     await dbPut('setting', 'lyricDelay', actualDelayToSave);
     // 延迟变化后当帧即需重算；rAF 只在播放时运行，暂停状态下手动刷新一次
@@ -218,8 +257,8 @@ function settleDialog(result) {
   if (!appDialog || !dialogResolve) return;
   const resolve = dialogResolve;
   dialogResolve = null;   // 先清空，close 事件就不会重复结算
-  appDialog.el.close();
-  resolve(result);
+  // 先播出场动画再真正关闭，完成后才把结果交给等待方
+  closeDialogAnimated(appDialog.el).then(() => resolve(result));
 }
 
 function openDialog(message, options) {

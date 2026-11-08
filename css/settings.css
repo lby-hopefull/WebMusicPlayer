@@ -137,7 +137,9 @@
 }
 
 .stepper #lyricDelayValue {
-  min-width: 4ch;
+  /* 预留负号宽度：正值「0.00s」5 字符，负值「-0.05s」6 字符，
+     固定 6ch 使出现负号时不会把容器撑宽 */
+  min-width: 6ch;
   text-align: center;
   color: var(--color-primary);
   font-size: var(--font-size-base);
@@ -146,6 +148,7 @@
 
 /* 主题选择器 */
 .theme-selector {
+  position: relative;
   display: flex;
   gap: var(--spacing-sm);
   background: var(--surface-1);
@@ -154,6 +157,8 @@
 }
 
 .theme-option {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -163,27 +168,33 @@
   border: 2px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--transition-base);
+  /* 不对边框做过渡：高亮框由滑动指示框承担；transform 过渡用于按压缩放（放慢以便看清） */
+  transition: color .25s ease, background-color .25s ease, transform .3s var(--ease-out);
   min-width: 80px;
   color: var(--color-text-primary);
 }
 
-.theme-option:hover {
+.theme-option:hover:not(:disabled) {
   background: var(--surface-2);
-  transform: translateY(-2px);
+  /* 覆盖全局 button:hover 的放大：主题按钮悬停仅高亮，不位移不缩放 */
+  transform: none;
 }
 
-/* 当前主题：容器用淡色胶囊、文字与图标用主色，与底部导航的高亮方式保持一致 */
+/* 当前主题：文字与图标用主色；高亮框由 .theme-indicator 滑动承担，按钮自身透明 */
 .theme-option.active {
-  background: var(--nav-item-active);
+  background: transparent;
   color: var(--color-primary);
-  border-color: var(--color-primary);
+  border-color: transparent;
   box-shadow: none;
 }
 
 .theme-option.active:hover {
-  background: var(--nav-item-active);
-  transform: translateY(-2px);
+  background: transparent;
+}
+
+/* 按住时缩小、松开恢复（按压反馈，而非点击后才跳动） */
+.theme-option:active:not(:disabled) {
+  transform: scale(.85);
 }
 
 .theme-option svg {

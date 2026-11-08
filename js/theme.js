@@ -74,8 +74,16 @@ const ThemeManager = (() => {
       effectiveTheme = prefersDark ? THEMES.DARK : THEMES.LIGHT;
     }
 
-    // 设置 HTML 属性
-    document.documentElement.setAttribute('data-theme', effectiveTheme);
+    // 设置 HTML 属性。已初始化过的主题再切换时，短暂挂上过渡类，
+    // 让全站颜色平滑迁移（首次加载直接落色，不播动画）
+    const root = document.documentElement;
+    const hadTheme = root.hasAttribute('data-theme');
+    if (hadTheme && typeof prefersReducedMotion === 'function' && !prefersReducedMotion()) {
+      root.classList.add('theme-transition');
+      clearTimeout(applyTheme._timer);
+      applyTheme._timer = setTimeout(() => root.classList.remove('theme-transition'), 500);
+    }
+    root.setAttribute('data-theme', effectiveTheme);
 
     // 更新 meta theme-color
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
@@ -104,6 +112,8 @@ const ThemeManager = (() => {
         button.classList.remove('active');
       }
     });
+    // 高亮框滑动到新的激活项
+    if (typeof updateThemeIndicator === 'function') updateThemeIndicator();
   }
 
   return {

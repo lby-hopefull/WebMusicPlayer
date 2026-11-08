@@ -15,7 +15,10 @@ document.getElementById('navSettings').addEventListener('click', () => showPage(
 document.getElementById('prevBtn').addEventListener('click', () => playPrev());
 document.getElementById('playPauseBtn').addEventListener('click', () => togglePlayPause());
 document.getElementById('nextBtn').addEventListener('click', () => playNext());
-document.getElementById('shuffleBtn').addEventListener('click', () => shuffleQueue());
+document.getElementById('shuffleBtn').addEventListener('click', function() {
+  shuffleQueue();
+  restartAnimation(this.querySelector('.icon'), 'spin-once');
+});
 document.getElementById('volumeSlider').addEventListener('input', function() { setVolume(this.value); });
 document.getElementById('playMode').addEventListener('change', async function() {
   await dbPut('setting', 'playMode', this.value);
@@ -37,6 +40,11 @@ document.getElementById('lyricDelayPlus').addEventListener('click', () => adjust
 document.getElementById('createListBtn').addEventListener('click', () => createList());
 document.getElementById('confirmAddSongsBtn').addEventListener('click', () => confirmAddSongs());
 document.getElementById('cancelAddSongsBtn').addEventListener('click', () => closeDialog());
+// ESC 关闭同样走一遍出场动画（原生 cancel 默认立即关闭）
+document.getElementById('songDialog').addEventListener('cancel', e => {
+  e.preventDefault();
+  closeDialog();
+});
 
 // ---- 排序 ----
 // 歌曲列表页的排序栏与管理弹窗内的排序组件共用同一份状态（listSortKey/listSortDir），
@@ -54,21 +62,24 @@ document.getElementById('cancelAddSongsBtn').addEventListener('click', () => clo
 });
 document.getElementById('manageSortKey').addEventListener('change', function() {
   manageSortKey = this.value;
-  renderManageList();
+  renderManageList().then(() => staggerChildren(document.getElementById('manageSongList')));
 });
 document.getElementById('manageSortDir').addEventListener('change', function() {
   manageSortDir = this.value;
-  renderManageList();
+  renderManageList().then(() => staggerChildren(document.getElementById('manageSongList')));
 });
 
 // ---- 管理页 ----
-document.getElementById('refreshListBtn').addEventListener('click', () => refreshList());
+document.getElementById('refreshListBtn').addEventListener('click', async function() {
+  // 刷新期间图标持续旋转，给出「正在进行」的反馈
+  const icon = this.querySelector('.icon');
+  icon.classList.add('spin-loop');
+  try { await refreshList(); } finally { icon.classList.remove('spin-loop'); }
+});
 document.getElementById('addFolderBtn').addEventListener('click', () => addLocalFolder());
 document.getElementById('localFolderInput').addEventListener('change', e => handleLocalFolder(e));
-document.getElementById('selectAllBtn').addEventListener('click', () => selectAllSongs());
-document.getElementById('deselectAllBtn').addEventListener('click', () => deselectAllSongs());
+document.getElementById('toggleSelectBtn').addEventListener('click', () => toggleSelectAll());
 document.getElementById('downloadSelectedBtn').addEventListener('click', () => downloadSelected());
-document.getElementById('downloadAllBtn').addEventListener('click', () => downloadAll());
 document.getElementById('deleteSelectedBtn').addEventListener('click', () => deleteSelected());
 document.getElementById('clearCacheBtn').addEventListener('click', () => clearCache());
 
