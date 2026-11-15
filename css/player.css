@@ -286,9 +286,9 @@ input[type="range"]::-moz-range-thumb {
 
 /* 第二页：播放队列 */
 #player-page-queue {
-  /* 恰好一屏高：列表在内部滚动，底部留白（导航预留）始终生效，
-     避免 min-height 随内容长高导致最后一行伸到胶囊导航下方 */
-  height: 100%;
+  /* 高度随内容撑开（.player-page 的 min-height:100% 保证至少一屏），
+     整页在 #player-swiper 内滚动，队列不再有自己的内部滚动容器；
+     底部导航预留的留白在页面末尾，最后一行不会伸到胶囊导航下方 */
   padding-top: var(--spacing-2xl);
   /* 与封面页同一条宽度上限，宽屏下居中显示 */
   width: 100%;
@@ -318,15 +318,9 @@ input[type="range"]::-moz-range-thumb {
 }
 
 #playlist {
-  /* 填充队列页剩余高度（扣除底部导航预留），内部滚动；
-     min-height:0 允许 flex 子项收缩，最后一行始终停在导航上方 */
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-md);
+  /* 队列平铺在页面里，滚动交给外层 #player-swiper：
+     不做带边框底色的独立容器，也不产生第二条滚动条 */
   padding: var(--spacing-md);
-  background: var(--surface-1);
 }
 
 .song {
@@ -423,6 +417,9 @@ input[type="range"]::-moz-range-thumb {
   z-index: 50;
   overflow-y: auto;
   overflow-x: hidden;
+  /* 关闭滚动锚定：当前行加粗/取消加粗与屏外行高度估值变化会被浏览器补偿成
+     scrollTop 漂移——手动浏览时视图会自己移动，漂移的 scroll 事件还会重置浏览窗口 */
+  overflow-anchor: none;
   padding: var(--spacing-2xl) var(--spacing-xl);
   /* 与底部胶囊、下拉面板同属浮层：同一级半透明底与毛玻璃参数 */
   background: var(--surface-4);
