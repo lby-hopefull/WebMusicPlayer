@@ -311,26 +311,25 @@ async function handleLocalFolder(event){
   const progressContainer = document.getElementById('progressContainer');
   progressContainer.style.display = 'block';
   
-  // 读取现有的「全部歌曲」，作为去重依据
+  // 读取现有的「全部歌曲」，供导入完成后合并歌名
   const playlistAll = await dbGet('playlist', 'all');
   const customAll = await dbGet('customLists', '全部歌曲');
-  const existingSet = new Set();
-  (playlistAll?.data || []).forEach(s => existingSet.add(s));
-  (customAll?.data || []).forEach(s => existingSet.add(s));
-  tracks.forEach(s => existingSet.add(s));
-  
-  // 按文件名去重，扩展名原样保留
+
+  // 去重依据是「缓存是否还在」，而不是「歌名是否在列表里」：
+  // 删除单曲缓存后歌名仍留在列表中，按歌名去重会让这首歌永远无法经文件夹加回
+  await updateCachedSongsSet();
   const seenInBatch = new Set();
   const newFiles = audioFiles.filter(f => {
     if(seenInBatch.has(f.name)) return false;
     seenInBatch.add(f.name);
-    return !existingSet.has(f.name);
+    return !cachedSongsSet.has(f.name);
   });
   
   const skipped = audioFiles.length - newFiles.length;
   const total = newFiles.length;
   let completed = 0;
   let failed = 0;
+  const addedNames = [];
   updateProgress(0, total);
   
   for(const file of newFiles){
@@ -340,7 +339,7 @@ async function handleLocalFolder(event){
       if(!await dbPut(storeName, file.name, arrayBuffer)) throw new Error('写入缓存失败');
       // 文件对象自带大小，时长在本地探测一次即可
       await recordSongMeta(file.name, { size: file.size, blob: file });
-      existingSet.add(file.name);
+      addedNames.push(file.name);
       completed++;
       updateProgress(completed, total);
       
@@ -357,14 +356,12 @@ async function handleLocalFolder(event){
   
   // 把新加入的歌曲名并入两处「全部歌曲」
   if(completed > 0){
-    const newNames = newFiles.slice(0, completed).map(f => f.name);
-    
     // 合并进 playlist.all
-    const mergedPlaylist = sortSongsInPlace([...new Set([...(playlistAll?.data || []), ...newNames])]);
+    const mergedPlaylist = sortSongsInPlace([...new Set([...(playlistAll?.data || []), ...addedNames])]);
     await dbPut('playlist', 'all', mergedPlaylist);
     
     // 合并进 customLists.全部歌曲
-    const mergedCustom = sortSongsInPlace([...new Set([...(customAll?.data || []), ...newNames])]);
+    const mergedCustom = sortSongsInPlace([...new Set([...(customAll?.data || []), ...addedNames])]);
     await dbPut('customLists', '全部歌曲', mergedCustom);
     
     // 同步全局 tracks（与 playlist.all 保持一致）
