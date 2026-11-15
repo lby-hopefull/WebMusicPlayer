@@ -373,6 +373,7 @@ function scrollLyricToCenter(idx) {
   const row = lyricRows[idx];
   const box = document.getElementById('lyricsContainer');
   if (!row || !box) return;
+  if (box.classList.contains('lyrics-browsing')) return;   // 手动浏览窗口内不拉回视图
   // 用 offsetTop/offsetHeight 计算目标（布局坐标，不受 content-visibility 屏外估值
   // 与模糊滤镜影响）：行中心对齐容器中线。行高已由 reserveBoldLineMetrics 预留，
   // 屏外行的 offsetTop 也稳定，落点比 getBoundingClientRect 更准。
@@ -419,18 +420,37 @@ function updateLyricFocus(focusIdx) {
 }
 
 // ========== 手动浏览模式 ==========
-// 手动滚动歌词时暂时取消距离模糊，让每一行都清晰可读；停止滚动一段时间后恢复聚焦。
+// 手动滚动进入浏览模式：取消距离模糊让每一行清晰可读，并暂停自动换行定位，
+// 窗口内视图不会被程序拉回。窗口严格 8s：每次手动滚动重新起算，
+// 到期恢复聚焦并把视图拉回当前行。
 // 程序换行定位同样触发 scroll 事件，用时间戳窗口区分：定位后 150ms 内的 scroll
 // 视为自动滚动，不进入浏览模式。滚轮、触摸、拖动滚动条产生的 scroll 都会进入。
 let lyricBrowseTimer = null;
-const LYRIC_BROWSE_RESTORE_MS = 1600;
+const LYRIC_BROWSE_RESTORE_MS = 8000;
 
 function enterLyricBrowse() {
   const box = document.getElementById('lyricsContainer');
   if (!box) return;
+  // 取消未完成的逐行滚动动画，不让它在手动滚动下继续滑动
+  lyricScrollAnims.forEach(a => a.cancel());
+  lyricScrollAnims = [];
   box.classList.add('lyrics-browsing');
   clearTimeout(lyricBrowseTimer);
-  lyricBrowseTimer = setTimeout(() => box.classList.remove('lyrics-browsing'), LYRIC_BROWSE_RESTORE_MS);
+  lyricBrowseTimer = setTimeout(() => {
+    lyricBrowseTimer = null;
+    box.classList.remove('lyrics-browsing');
+    // 浏览窗口结束：恢复自动跟随，把视图拉回当前行（视图隐藏时不做）
+    if (box.clientHeight > 0) scrollLyricToCenter(activeLineIdx >= 0 ? activeLineIdx : 0);
+  }, LYRIC_BROWSE_RESTORE_MS);
+}
+
+// 显式导航（点歌词行跳转、打开歌词视图）立即结束浏览窗口
+function exitLyricBrowse() {
+  const box = document.getElementById('lyricsContainer');
+  if (!box) return;
+  clearTimeout(lyricBrowseTimer);
+  lyricBrowseTimer = null;
+  box.classList.remove('lyrics-browsing');
 }
 
 (function setupLyricBrowse() {
@@ -470,6 +490,7 @@ function correctLyricCenter() {
   lyricCenterFixRaf = null;
   const box = document.getElementById('lyricsContainer');
   if (!box || !lyricRows.length) return;
+  if (box.classList.contains('lyrics-browsing')) return;   // 浏览窗口内的偏差属于用户操作
 
   let idx = activeLineIdx;
   if (idx < 0) idx = findActiveLineIndex(currentLyrics, audio.currentTime - lyricDelay);
@@ -490,6 +511,8 @@ function correctLyricCenter() {
 function alignLyricsToActive() {
   const box = document.getElementById('lyricsContainer');
   if (!box || !lyricRows.length) return;
+  // 浏览窗口内旋转/改尺寸也不拉回；打开视图的路径会先 exitLyricBrowse 再走到这里
+  if (box.classList.contains('lyrics-browsing')) return;
 
   let idx = activeLineIdx;
   if (idx < 0) idx = findActiveLineIndex(currentLyrics, audio.currentTime - lyricDelay);
@@ -625,11 +648,20 @@ function renderLyrics() {
   updateLyricHighlight();   // 立即对齐一次（歌曲可能是以暂停状态载入的）
 }
 
+// 点击跳转后，若解码器把 seek 落到行起点之前一帧（部分浏览器/格式按帧起点取整），
+// 二分高亮会停在上一行结尾。记录跳转意图：落点早于起点的一帧窗口内仍按被点击行
+// 高亮与居中，播放越过起点即解除；不偏移音频，保证从第一个词起播。
+let lyricJumpGuard = null;
+
 function jumpToLyric(index) {
   if (index >= currentLyrics.length) return;
   const t = currentLyrics[index].startTime;
   if (isFinite(t)) {
-    audio.currentTime = t;
+    exitLyricBrowse();   // 点行跳转是显式导航，视图应立即跟随
+    // 听感与高亮时间轴均为 currentTime - lyricDelay（延迟补偿输出 latency），
+    // 加上延迟后落点才正好是该行第一个词
+    audio.currentTime = t + lyricDelay;
+    lyricJumpGuard = { idx: index, t };
     playWithFade();   // 跳转后从静音淡入（已在播放则音量不变）
   }
 }
@@ -715,7 +747,12 @@ function updateLyricHighlight() {
   if (!lyricRows.length || !currentLyrics.length) return;
 
   const ct = audio.currentTime - lyricDelay; // 应用延迟
-  const lineIdx = findActiveLineIndex(currentLyrics, ct);
+  let lineIdx = findActiveLineIndex(currentLyrics, ct);
+  if (lyricJumpGuard) {
+    const g = lyricJumpGuard;
+    if (ct >= g.t || ct < g.t - 0.15 || lineIdx !== g.idx - 1) lyricJumpGuard = null;
+    else lineIdx = g.idx;   // 帧量化落点偏早时仍命中被点击的行
+  }
 
   if (lineIdx !== activeLineIdx) {
     const goingBack = lineIdx < activeLineIdx;
@@ -841,6 +878,7 @@ function toggleCoverLyric() {
   if (showingLyrics) {
     // 容器变为可见后才有真实高度：先对齐当前行的高亮，再把该行滚到视口中央，
     // 开启瞬间直接到位，不从首行滑下来
+    exitLyricBrowse();   // 重新打开视图即回到自动跟随
     updateLyricHighlight();
     alignLyricsToActive();
   }
