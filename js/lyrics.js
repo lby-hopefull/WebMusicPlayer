@@ -453,6 +453,21 @@ function exitLyricBrowse() {
   box.classList.remove('lyrics-browsing');
 }
 
+// 单曲循环重播：歌词回到最上面从头开始。重播是自动行为，浏览窗口一并结束，
+// 否则视图会停在手动浏览的位置、等 8s 到期才拉回。挂起的落点校正也要取消，
+// 它携带的是旧播放位置的行索引，会把刚归零的视图又拉向旧行。
+function resetLyricsToTop() {
+  const box = document.getElementById('lyricsContainer');
+  if (!box) return;
+  exitLyricBrowse();
+  if (lyricCenterFixRaf !== null) { cancelAnimationFrame(lyricCenterFixRaf); lyricCenterFixRaf = null; }
+  const prevBehavior = box.style.scrollBehavior;
+  box.style.scrollBehavior = 'auto';
+  lyricAutoScrollAt = performance.now();
+  box.scrollTop = 0;
+  box.style.scrollBehavior = prevBehavior;
+}
+
 (function setupLyricBrowse() {
   const box = document.getElementById('lyricsContainer');
   if (!box) return;

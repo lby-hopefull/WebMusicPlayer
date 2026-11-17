@@ -194,6 +194,7 @@ async function playNext(){
       await reshuffleAndRestart();
     }
   }else if(mode==='loop'){
+    resetLyricsToTop();   // 单曲循环重播从头开始，歌词回到最上面
     await playTrack(currentTrack);
   }else if(currentTrack<currentQueue.length-1){
     await playTrack(currentTrack+1);

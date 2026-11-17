@@ -477,11 +477,13 @@ dialog.dialog-closing::backdrop {
   transition-delay: 0s;
 }
 
-/* 手动浏览：滚动歌词时所有行清晰可读（覆盖距离模糊），停止后由 JS 摘类恢复聚焦 */
+/* 手动浏览：滚动歌词时所有行清晰可读（覆盖距离模糊），停止后由 JS 摘类恢复聚焦。
+   transform 过渡必须保留：浏览窗口内播放仍在换行，当前行的放大强调要平滑动画，
+   只覆盖 filter/opacity 会把整条 transition 换掉、放大变成瞬时跳变 */
 #lyricsContainer.lyrics-browsing .lyric-line-container {
   filter: blur(0);
   opacity: 1;
-  transition: filter .2s ease, opacity .2s ease;
+  transition: filter .2s ease, opacity .2s ease, transform .45s var(--ease-out);
   transition-delay: 0s;
 }
 
