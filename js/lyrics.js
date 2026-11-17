@@ -138,12 +138,21 @@ function parseLyrics(lyricText) {
   const distTo = (line, t) => t < line.rangeStart ? line.rangeStart - t
                            : (t > line.rangeEnd ? t - line.rangeEnd : 0);
 
-  candidates.forEach(cand => {
-    if (cand.claimed) return;   // 它自己已经是别人的原文了，要保留显示
-    const pool = entries.filter(l => l !== cand && !l.translate && !l.claimed);
+  // dup/single 先关联、range 最后：单字中文原文行（[起]字[止]）与中文整行同样满足
+  // range 判据，若按文件顺序先处理，会吞掉尚未关联的译文点行并把自己当译文删除。
+  const orderedCandidates = candidates.filter(c => c.kind !== 'range')
+    .concat(candidates.filter(c => c.kind === 'range'));
+  orderedCandidates.forEach(cand => {
+    if (cand.claimed || cand.remove) return;   // 已作为译文被关联/移除的行不再参与
+    const pool = entries.filter(l => l !== cand && !l.translate && !l.claimed && !l.remove);
     let target = null;
 
     if (cand.kind === 'range') {
+      // range 形态译文必紧跟其原文（LDDC 约定）：须覆盖最近的前置未移除行才参与关联，
+      // 否则是被误判成 range 的整行/单字原文行，保留为普通行显示。
+      const prev = entries.filter(l => !l.remove && l.seq < cand.seq).pop();
+      if (!prev || cand.rangeStart > prev.rangeStart + COVER_EPS ||
+          cand.rangeEnd < prev.rangeEnd - COVER_EPS) return;
       // 格式 A：译文行以一段区间覆盖原文行。判据是起点不晚于原文、结束不早于原文。
       // 两端都必须容差，因为实际文件里译文的时间戳只是照抄原文的近似值：
       //   起点：与原文完全相同是最常见的写法
